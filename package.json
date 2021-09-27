@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "ganache": "ganache-cli"
+  },
+  "dependencies": {
+    "ganache-cli": "^6.12.2"
+  }
+}

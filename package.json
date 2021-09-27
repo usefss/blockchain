@@ -1,8 +1,25 @@
 {
+  "name": "smart",
+  "version": "1.0.0",
+  "description": "smart contract project",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usefss/blockchain.git"
+  },
   "scripts": {
     "ganache": "ganache-cli"
   },
   "dependencies": {
+  },
+  "author": "Yosef SL",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/usefss/blockchain/issues"
+  },
+  "homepage": "https://github.com/usefss/blockchain#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.13",
     "ganache-cli": "^6.12.2"
   }
 }

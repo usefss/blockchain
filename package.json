@@ -2,13 +2,12 @@
   "name": "smart",
   "version": "1.0.0",
   "description": "smart contract project",
-  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/usefss/blockchain.git"
   },
   "scripts": {
-    "ganache": "ganache-cli"
+    "ganache": "ganache-cli -d --db ./ganache/data/ -i 1111 --accounts 20 --deterministic --mnemonic=SEED_FOR_ACCOUNTS"
   },
   "dependencies": {
   },

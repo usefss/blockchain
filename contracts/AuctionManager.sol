@@ -34,6 +34,16 @@ contract AuctionManager {
             be heavilly gased.
     */
     
+    struct ServerPriorityBlock {
+        string name;
+        uint cost;
+    }
+
+    struct MobilePriorityBlock {
+        uint id;
+        uint cost;
+    }
+
     struct ServerNode {
         string name;
 
@@ -47,7 +57,8 @@ contract AuctionManager {
         uint upLinkLatency;
         uint areaId;
         uint joinDelay;
-
+        
+        uint offer;
     }
 
     struct MobileTask {
@@ -57,6 +68,8 @@ contract AuctionManager {
         uint nwLength;
         uint pesNumber;
         uint outputSize;
+
+        uint offer;
     }
 
     struct Auction {
@@ -67,9 +80,39 @@ contract AuctionManager {
 
         uint[] mobileKeys;
         mapping(uint => MobileTask) mobileTasks;
+        mapping(uint => ServerPriorityBlock[]) mobilePriorities;
 
         string[] serverKeys;
         mapping(string => ServerNode) serverNodes;
+        mapping(string => MobilePriorityBlock[]) serverPriorities;
+
+        /*
+            When a new server registers:
+                save the info in serverKeys and serverNodes
+                there are some tuples in the auction:
+                    we need to create a priority list for this new server \
+                    and add each of them in it, e.g:
+                        NewServerPriority => [{t1, 100}, {t4, 50}, {t2, 100}]
+                    and after that we need to add this new server \
+                    to every tuple's priority list, e.g:
+                        before: 
+                            T1Priority => {{s1, 100}, {s2, 80}}
+                            T2Priority => {{s2, 100}, {s1, 80}}
+                            T4Priority => {{s1, 20}, {s2, 10}}
+                        after:
+                            T1Priority => {{s1, 100}, {s2, 80}, {new_s, 70}}
+                            T2Priority => {{s2, 100}, {s1, 80}, {new_s, 70}}
+                            T4Priority => {{new_s, 70}, {s1, 20}, {s2, 10}}
+                    first of all for storing these kind of information we need \
+                    a data structure like this:
+                        {
+                            "string": [{"name": "string", "priority": int}, ...],
+                            "string": [{"name": "string", "priority": int}, ...]
+                        }
+                        mapping(key => Struct[])
+                    read about workflow in each server and node registeration process
+                
+        */
     }
  
     mapping(uint => Auction) auctions;
@@ -96,12 +139,52 @@ contract AuctionManager {
     );
 
     function registerMobileTask(
-        uint id, uint cpuLength, uint nwLength, uint pesNumber, uint outputSize
+        uint id, uint cpuLength, uint nwLength, uint pesNumber, uint outputSize,
+        uint offer
     ) public {
         // we does not check if this task is already registered in active autcion
+        /*
+            - check if current auction is still valid otherwise creates a new auction
+            - add tuple meta data into the mobileTasks
+            - add the key of that tuple to mobileKeys to be accessable
+                this means that in the mappig you can not access to the keys and values
+                for getting the values you need to first obtain the keys from mobileKeys
+            - create and add this tuple priority for each server in mobilePriorities:
+                - calculate cost for all tuple -> server(i) pairs and sort them in \
+                mobilePriorities[id].
+                    How to sort?? we new that from iteration zero we have how many 
+                    pairs there are in this array, so here is an example:
+                        for server in servers:
+                            iteration zero:
+                                mobilePriorities[id][0] = ServerPriorityBlock(server.name, tupleCost(tuple, server))
+                            next:
+                                for pair in mobilePriorities:
+                                    # consider this we must sort in descending
+                                    if tupleCost(tuple, server) > pair.cost:
+                                        insert ServerPriorityBlock(server.name, tupleCost(tuple, server)) into index 0
+                                        How to insert?? we have an array of structs, e.g:
+                                            [struct(str, uint), struct(str, uint), ]
+                                        we can make a temporary variable and shift all of the indexes, a traditional
+                                        way a little complex and cpu busy, \
+                                        or we can use a linked list, complex solution
+                                    else:
+                                        mobilePriorities[id][1] = ServerPriorityBlock(server.name, tupleCost(tuple, server))
+                            next:
+                                ...
+            - create and add this tuple priority in each server's serverPriorities:
+                - calculate cost for all server(i) -> tuple pairs and sort them in already existing \
+                serverPriorities[i], e.g:
+                    for key in serverKeys:
+                        cost = serverCost(server(key), tuple)
+                        for pair in serverPriorities[key]:
+                            if cost < pair.cost:
+                                insert MobilePriorityBlock(id, cost) before
+                                break
+            - emit success to client 
+        */
         requestAuction();
         auctions[activeAuction].mobileTasks[id] = MobileTask(
-            id, cpuLength, nwLength, pesNumber, outputSize
+            id, cpuLength, nwLength, pesNumber, outputSize, offer
         );
         auctions[activeAuction].mobileKeys.push(id);
         emit MobileTaskRegistered(id, activeAuction, auctions[activeAuction].mobileKeys.length);
@@ -113,14 +196,26 @@ contract AuctionManager {
         uint level, uint mips, uint ram,
         uint ratePerMips, // float
         uint upLinkLatency, uint areaId,
-        uint joinDelay
+        uint joinDelay, uint offer
     ) public {
         // we does not check if this name already is registered in this auction
+        /*
+            - check if there is an ongoing auction, otherwise create a new
+            - add server metadata in serverNodes
+            - add server name in serverKeys for accessablility sake
+            - create the serverPriority for already exisiting tuples in the auction:
+                for each tuple(i):
+                    insert sorted in serverPriorities[server.name] MobilePriorityBlock(tuple(i).id, serverCost(server, tuple))
+            - update serverPriority for already exisiting tuples:
+                for each tuple(i):
+                    insert sorted in mobilePriorities(tuple(i).id) ServerPriorityBlock(server.name, tupleCost(tuple, server))
+            - emit success to user
+        */
         requestAuction();
         auctions[activeAuction].serverNodes[name] = ServerNode(
             name, busyPower, downBw, idlePower, level,
             mips, ram, ratePerMips, upLinkLatency, areaId,
-            joinDelay
+            joinDelay, offer
         );
         auctions[activeAuction].serverKeys.push(name);
         emit ServerNodeRegistered(name, activeAuction, auctions[activeAuction].serverKeys.length);

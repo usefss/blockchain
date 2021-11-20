@@ -187,7 +187,28 @@ contract AuctionManager {
             id, cpuLength, nwLength, pesNumber, outputSize, offer
         );
         auctions[activeAuction].mobileKeys.push(id);
+        createTuplePriorities(auctions[activeAuction].mobileTasks[id]);
+        updateServerPriorities(auctions[activeAuction].mobileTasks[id]);
         emit MobileTaskRegistered(id, activeAuction, auctions[activeAuction].mobileKeys.length);
+    }
+
+    function updateServerPriorities(MobileTask memory tuple) private  {
+        /* 
+            updates already exisiting server priority list with new tuple
+            - create and add this tuple priority in each server's serverPriorities:
+                - calculate cost for all server(i) -> tuple pairs and sort them in already existing \
+                serverPriorities[i].
+
+        */
+    }
+
+    function createTuplePriorities(MobileTask memory tuple) private {
+        /*
+            creates tuple priority list for newly arrived task on each server
+            - create and add this tuple priority for each server in mobilePriorities:
+                - calculate cost for all tuple -> server(i) pairs and sort them in \
+                mobilePriorities[id].
+        */
     }
 
     function registerServerNode(
@@ -218,7 +239,51 @@ contract AuctionManager {
             joinDelay, offer
         );
         auctions[activeAuction].serverKeys.push(name);
+        createServerPriorities(auctions[activeAuction].serverNodes[name]);
+        updateTuplePriorities(auctions[activeAuction].serverNodes[name]);
         emit ServerNodeRegistered(name, activeAuction, auctions[activeAuction].serverKeys.length);
+    }
+
+    function createServerPriorities(ServerNode memory server) private  {
+        /* 
+            does this step:
+                for each tuple(i):
+                    insert sorted in serverPriorities[server.name] MobilePriorityBlock(tuple(i).id, serverCost(server, tuple))
+        */
+    }
+
+    function updateTuplePriorities(ServerNode memory server) private {
+        /*
+            does this step:
+                for each tuple(i):
+                    insert sorted in mobilePriorities(tuple(i).id) ServerPriorityBlock(server.name, tupleCost(tuple, server))
+        */
+    }
+
+    // function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint) {
+    //     /* 
+    //         this value shows that how much a tuple likes to get picked by a server
+    //         this is used in mobilePriorities
+    //     */
+        
+    //     return 0;
+    // }
+
+    // function serverCost(ServerNode memory server, MobileTask memory tuple) private pure returns (uint) {
+    //     /*
+    //         this value shows that how much the server likes to take the tuple
+    //         this is used in serverPriorities
+    //     */
+    //     return 0;
+    // }
+
+    function auctionResult() public {
+        /*
+            this interface intends to return the response for the an auction
+            inputs:     
+                auction id
+                ?
+        */
     }
 
     function requestAuction() private {

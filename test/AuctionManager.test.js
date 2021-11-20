@@ -34,6 +34,7 @@ contract('Auction manager test', (accounts) => {
                 i, // nw length
                 i, // pes number
                 i, // output number
+                i, //offer
             )
             evnt = result.logs[0].args
             assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -53,7 +54,7 @@ contract('Auction manager test', (accounts) => {
                 i, i, i, // level, mips, ram
                 i, // rate per mips
                 i, i, // up link latency, area id
-                i // join delay
+                i, i // join delay, offer
             )
             evnt = result.logs[0].args
             assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -71,6 +72,7 @@ contract('Auction manager test', (accounts) => {
             669, // nw length
             669, // pes number
             669, // output number
+            669, // offer
         )
         evnt = result.logs[0].args
         assert.equal(1, evnt.biddersCount.toNumber())

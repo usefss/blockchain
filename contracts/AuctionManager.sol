@@ -72,6 +72,10 @@ contract AuctionManager {
         uint offer;
     }
 
+    struct TupleMappingMips {
+        mapping(uint => uint) tuples;
+    }
+
     struct Auction {
         uint startTime; // init with block.timestamp
 
@@ -85,7 +89,8 @@ contract AuctionManager {
         string[] serverKeys;
         mapping(string => ServerNode) serverNodes;
         mapping(string => MobilePriorityBlock[]) serverPriorities;
-
+        mapping(string => uint) serverQuta;
+        mapping(string => TupleMappingMips) tupleRequireMips;
         /*
             When a new server registers:
                 save the info in serverKeys and serverNodes
@@ -189,6 +194,7 @@ contract AuctionManager {
         auctions[activeAuction].mobileKeys.push(id);
         createTuplePriorities(auctions[activeAuction].mobileTasks[id]);
         updateServerPriorities(auctions[activeAuction].mobileTasks[id]);
+        updateTupleRequireMips(auctions[activeAuction].mobileTasks[id]);
         emit MobileTaskRegistered(id, activeAuction, auctions[activeAuction].mobileKeys.length);
     }
 
@@ -254,8 +260,29 @@ contract AuctionManager {
         );
         auctions[activeAuction].serverKeys.push(name);
         createServerPriorities(auctions[activeAuction].serverNodes[name]);
+        auctions[activeAuction].serverQuta[name] = mips;
+        createTupleRequireMips(auctions[activeAuction].serverNodes[name]);
         updateTuplePriorities(auctions[activeAuction].serverNodes[name]);
         emit ServerNodeRegistered(name, activeAuction, auctions[activeAuction].serverKeys.length);
+    }
+
+    function createTupleRequireMips(ServerNode memory server) private {
+        for (uint i = 0; i < auctions[activeAuction].mobileKeys.length; i ++) {
+            MobileTask memory tuple = auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]];
+            // tuple.requireMips += tupleCost(tuple, server);
+            auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
+        }
+    }
+
+    function updateTupleRequireMips(MobileTask memory tuple) private {
+        for (uint i = 0; i < auctions[activeAuction].serverKeys.length; i ++) {
+            ServerNode memory server = auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]];
+            auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
+        }
+    }
+
+    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) pure private returns (uint) {
+        return server.mips; // TODO
     }
 
     function createServerPriorities(ServerNode memory server) private {

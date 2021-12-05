@@ -21,3 +21,6 @@ If you have problems with solidity compiler version for truffle, you can checkou
 ```
 truffle test
 ```
+
+* Notes
+Do not send tuple with id of 0, or server with name of ""

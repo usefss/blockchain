@@ -9,8 +9,6 @@
   "scripts": {
     "ganache": "ganache-cli -d --db ./ganache/data/ -i 1111 --accounts 20 --deterministic --mnemonic=SEED_FOR_ACCOUNTS"
   },
-  "dependencies": {
-  },
   "author": "Yosef SL",
   "license": "ISC",
   "bugs": {
@@ -18,7 +16,8 @@
   },
   "homepage": "https://github.com/usefss/blockchain#readme",
   "devDependencies": {
-    "nodemon": "^2.0.13",
-    "ganache-cli": "^6.12.2"
+    "ganache-cli": "^6.12.2",
+    "hardhat": "^2.7.0",
+    "nodemon": "^2.0.13"
   }
 }

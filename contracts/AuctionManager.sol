@@ -132,7 +132,9 @@ contract AuctionManager {
     event DebugEvent(
         string text
     );
-
+    event AuctionTupleResult (
+        string serverName
+    );
     event DebugUint(
         uint number
     );
@@ -272,7 +274,7 @@ contract AuctionManager {
         createServerPriorities(auctions[activeAuction].serverNodes[name]);
         auctions[activeAuction].serverQuta[name] = mips;
         console.log("server priority");
-        console.log(auctions[activeAuction].serverPriorities[name][0].id);
+        // console.log(auctions[activeAuction].serverPriorities[name][0].id);
         createTupleRequireMips(auctions[activeAuction].serverNodes[name]);
         console.log("fails here?");
         updateTuplePriorities(auctions[activeAuction].serverNodes[name]);
@@ -376,6 +378,7 @@ contract AuctionManager {
         } else {
             emit DebugEvent("tuple was assigned");
         }
+        emit AuctionTupleResult(auctions[auctionID].tupleResult[tupleID]);
     }
 
     function calcAuctionResult(Auction storage auction, uint tupleID) private {
@@ -389,95 +392,113 @@ contract AuctionManager {
             we have server quta:
                 serverQuta[server.name]
         */
+        uint initalTupleID = tupleID;
         mapping(uint => string) storage tempTupleResult = auction.tupleResult;
         mapping(string => uint) storage tempServerQuta = auction.serverQuta;
         // uint tupleID = auction.mobileKeys[0]; // if not allocated
         //else break
 
-        /// break if there is no free tuple
-        console.log("tupleID: ", tupleID);
         while (true) {
-            bool tupleNotAssigned = true;
-            bool foundCircle = false;
-            string memory circleStartServer = "";
-            console.log("where it failds?");
-            console.log(auction.serverKeys.length);
-            console.log(auction.mobileKeys.length);
-            for (uint i = 0; i < auction.serverKeys.length; i ++) {
-                // find the tuple => server? and then server? => tuple
-                console.log("before for loop tuple priorities");
-                string memory serverName = auction.mobilePriorities[tupleID][i].name;
-                console.log("serverName: ", serverName);
-                uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
-                if (tupleMips <= tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
-                    // tuple is assinged to server
-                    tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
-                    tempTupleResult[tupleID] = serverName;
-                    tupleNotAssigned = false;
-                    // T0 => S1 => T?  => ... T =/ S T=>S=/T?
-                    for (uint j = 0; j < auction.mobileKeys.length; j ++) { // No calc on if server is able to handle
-                        // find the prefered tuple for server
-                        // choose from not assinged tuples (real ones) Note
-                        uint perfTupleID = auction.serverPriorities[serverName][j].id;
-                        bool perfTupleWasAssigned = false;
-                        for (uint k = 0; k < auction.assingedTuples.length; k ++) {
-                            if (auction.assingedTuples[k] == perfTupleID) {
-                                perfTupleWasAssigned = true;
+            console.log("tupleID: ", tupleID);
+            while (true) {
+                bool tupleNotAssigned = true;
+                bool foundCircle = false;
+                string memory circleStartServer = "";
+                console.log("where it failds?");
+                console.log(auction.serverKeys.length);
+                console.log(auction.mobileKeys.length);
+                for (uint i = 0; i < auction.serverKeys.length; i ++) {
+                    // find the tuple => server? and then server? => tuple
+                    console.log("before for loop tuple priorities");
+                    string memory serverName = auction.mobilePriorities[tupleID][i].name;
+                    console.log("serverName: ", serverName);
+                    uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
+                    if (tupleMips <= tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
+                        // tuple is assinged to server
+                        tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
+                        tempTupleResult[tupleID] = serverName;
+                        tupleNotAssigned = false;
+                        // T0 => S1 => T?  => ... T =/ S T=>S=/T?
+                        for (uint j = 0; j < auction.mobileKeys.length; j ++) { // No calc on if server is able to handle
+                            // find the prefered tuple for server
+                            // choose from not assinged tuples (real ones) Note
+                            uint perfTupleID = auction.serverPriorities[serverName][j].id;
+                            bool perfTupleWasAssigned = false;
+                            for (uint k = 0; k < auction.assingedTuples.length; k ++) {
+                                if (auction.assingedTuples[k] == perfTupleID) {
+                                    perfTupleWasAssigned = true;
+                                }
+                            }
+                            if (perfTupleWasAssigned == false) {
+                                auction.serverResult[serverName] = perfTupleID;
+                                break;
                             }
                         }
-                        if (perfTupleWasAssigned == false) {
-                            auction.serverResult[serverName] = perfTupleID;
-                            break;
-                        }
-                    }
-                    console.log("trying to find circle");
-                    string memory serverRounding = serverName;
-                    while (true) {
-                        // find out if a circle is created
-                        // we check with old nodes NOTE
-                        console.log("serverRounding: ", serverRounding);
-                        if (auction.serverResult[serverRounding] != 0) {
-                            console.log("tuple rounding: ", auction.serverResult[serverRounding]);
-                            if (bytes(tempTupleResult[auction.serverResult[serverRounding]]).length > 0) {
-                                serverRounding = tempTupleResult[auction.serverResult[serverRounding]];
-                                console.log("compare", serverRounding, serverName);
-                                if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((serverName)))) {
-                                    console.log("was same");
-                                    foundCircle = true;
-                                    circleStartServer = serverName;
-                                    break;
-                                }
+                        console.log("trying to find circle");
+                        string memory serverRounding = serverName;
+                        while (true) {
+                            // find out if a circle is created
+                            // we check with old nodes NOTE
+                            console.log("serverRounding: ", serverRounding);
+                            if (auction.serverResult[serverRounding] != 0) {
+                                console.log("tuple rounding: ", auction.serverResult[serverRounding]);
+                                if (bytes(tempTupleResult[auction.serverResult[serverRounding]]).length > 0) {
+                                    serverRounding = tempTupleResult[auction.serverResult[serverRounding]];
+                                    console.log("compare", serverRounding, serverName);
+                                    if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((serverName)))) {
+                                        console.log("was same");
+                                        foundCircle = true;
+                                        circleStartServer = serverName;
+                                        break;
+                                    }
+                                } else break;
                             } else break;
-                        } else break;
-                    }
-                    console.log("foundCircle: ", foundCircle);
-                    break;
-                }
-            }
-            if (foundCircle) {
-                // T1 -> S2 -> T0 -> S4 -> T15 -> S2:circleStartServer -> T0 
-                // T1 -> S2 -> T0 -> S4 -> T15 -> S4:circleStartServer -> T15 
-                // add new results to actual results
-                uint tupleRoundingID = auction.serverResult[circleStartServer];
-                while (true) {
-                    auction.tupleResult[tupleRoundingID] = tempTupleResult[tupleRoundingID];
-                    auction.assingedTuples.push(tupleRoundingID);
-                    uint tupleMips = auction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
-                    auction.serverQuta[tempTupleResult[tupleRoundingID]] = auction.serverQuta[tempTupleResult[tupleRoundingID]] - tupleMips;
-                    if (keccak256(abi.encodePacked((tempTupleResult[tupleRoundingID]))) == keccak256(abi.encodePacked((circleStartServer)))) {
+                        }
+                        console.log("foundCircle: ", foundCircle);
                         break;
                     }
-                    tupleRoundingID = auction.serverResult[tempTupleResult[tupleRoundingID]];
                 }
-                break;
+                if (foundCircle) {
+                    // T1 -> S2 -> T0 -> S4 -> T15 -> S2:circleStartServer -> T0
+                    // T1 -> S2 -> T?
+                    // .
+                    // .
+                    // T1 -> S? RESULT 50%
+                    // T20 21... 
+                    // T1 -> S2 -> T0 -> S4 -> T15 -> S4:circleStartServer -> T15 
+                    // add new results to actual results
+                    uint tupleRoundingID = auction.serverResult[circleStartServer];
+                    while (true) {
+                        auction.tupleResult[tupleRoundingID] = tempTupleResult[tupleRoundingID];
+                        auction.assingedTuples.push(tupleRoundingID);
+                        uint tupleMips = auction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
+                        auction.serverQuta[tempTupleResult[tupleRoundingID]] = auction.serverQuta[tempTupleResult[tupleRoundingID]] - tupleMips;
+                        if (keccak256(abi.encodePacked((tempTupleResult[tupleRoundingID]))) == keccak256(abi.encodePacked((circleStartServer)))) {
+                            break;
+                        }
+                        tupleRoundingID = auction.serverResult[tempTupleResult[tupleRoundingID]];
+                    }
+                    break;
+                }
+                if (tupleNotAssigned) {
+                    // Tuple not assigned to any server
+                    // Result T => !!
+                    auction.assingedTuples.push(tupleID);
+                    break;
+                }
+                tupleID = auction.serverResult[tempTupleResult[tupleID]];
             }
-            if (tupleNotAssigned) {
-                // Tuple not assigned to any server
-                // Result T => !!
-                auction.assingedTuples.push(tupleID);
-                break;
+            bool initialTupleWasAssigned = false;
+            for (uint k = 0; k < auction.assingedTuples.length; k ++) {
+                if (auction.assingedTuples[k] == initalTupleID) {
+                    initialTupleWasAssigned = true;
+                }
             }
-            tupleID = auction.serverResult[tempTupleResult[tupleID]];
+            if (initialTupleWasAssigned) {
+                break;
+            } else {
+                tupleID = initalTupleID;
+            }
         }
     }
 

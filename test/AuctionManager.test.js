@@ -4,6 +4,8 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+tupleIds = []
+
 contract('Auction manager test', (accounts) => {
     before(async() => {
         this.manager = await AuctionManager.deployed()
@@ -27,7 +29,8 @@ contract('Auction manager test', (accounts) => {
     // })
 
     it('registers mobile task', async () => {
-        for (i = 1; i < 2; i ++) {
+        for (i = 1; i < 5; i ++) {
+            tupleIds.push(i)
             result = await this.manager.registerMobileTask(
                 i,
                 i, // cpu length
@@ -36,9 +39,9 @@ contract('Auction manager test', (accounts) => {
                 i, // output number
                 i, //offer
             )
-            for (i = 0; i < result.logs.length; i ++) {
-                console.log(i)
-                console.log(result.logs[i].args)
+            for (j = 0; j < result.logs.length; j ++) {
+                console.log(j)
+                console.log(result.logs[j].args)
             }
             // evnt = result.logs[0].args
             // assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -60,9 +63,9 @@ contract('Auction manager test', (accounts) => {
                 i, i, // up link latency, area id
                 i, i // join delay, offer
             )
-            for (i = 0; i < result.logs.length; i ++) {
-                console.log(i)
-                console.log(result.logs[i].args)
+            for (j = 0; j < result.logs.length; j ++) {
+                console.log(j)
+                console.log(result.logs[j].args)
             }
             // evnt = result.logs[0].args
             // assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -91,12 +94,16 @@ contract('Auction manager test', (accounts) => {
     // })
 
     it('auction result', async () => {
-        result = await this.manager.auctionResultTuple(1, 1)
-        for (i = 0; i < result.logs.length; i ++) {
-            console.log(i)
-            console.log(result.logs[i].args)
+        for (j = 0; j < tupleIds.length; j ++) {
+            console.log()
+            console.log('FOUDING RESULT FOR TUPLE ID: ', tupleIds[j])
+            result = await this.manager.auctionResultTuple(1, tupleIds[j])
+            for (i = 0; i < result.logs.length; i ++) {
+                console.log(i)
+                console.log(result.logs[i].args)
+            }
+            console.log('gas: ', result.receipt.gasUsed)
         }
-        console.log('gas: ', result.receipt.gasUsed)
 
     })
 

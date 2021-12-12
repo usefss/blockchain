@@ -6,6 +6,13 @@ npm install -g ganache
 
 npm run ganache
 ```
+
+* Or use hardhat node for debugging
+```
+npx hardhat node
+```
+
+
 * Setup truffle
 ```
 npm install -g truffle

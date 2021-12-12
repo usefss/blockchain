@@ -5,6 +5,8 @@ function sleep(ms) {
 }
 
 tupleIds = []
+tupleNum = 15
+serverNum = 10
 
 contract('Auction manager test', (accounts) => {
     before(async() => {
@@ -29,7 +31,7 @@ contract('Auction manager test', (accounts) => {
     // })
 
     it('registers mobile task', async () => {
-        for (i = 1; i < 5; i ++) {
+        for (i = 1; i < tupleNum + 1; i ++) {
             tupleIds.push(i)
             result = await this.manager.registerMobileTask(
                 i,
@@ -53,7 +55,7 @@ contract('Auction manager test', (accounts) => {
 
     it('registers server nodes', async () => {
         serverName = 'name'
-        for(i = 1; i < 2; i ++ ) {
+        for(i = 1; i < serverNum + 1; i ++ ) {
             _name = serverName + '_' + i
             result = await this.manager.registerServerNode(
                 _name, i, // name, busy power

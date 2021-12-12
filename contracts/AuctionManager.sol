@@ -91,6 +91,7 @@ contract AuctionManager {
         mapping(string => ServerNode) serverNodes;
         mapping(string => MobilePriorityBlock[]) serverPriorities;
         mapping(string => uint) serverQuta;
+        mapping(string => uint) tempServerQuta;
         mapping(string => TupleMappingMips) tupleRequireMips;
         
         mapping(uint => string) tupleResult;
@@ -127,7 +128,7 @@ contract AuctionManager {
     mapping(uint => Auction) auctions;
     uint private activeAuction = 0;
     // uint private lastCompleteAuction = 0;
-    uint private auctionLifeTime = 5; // this is in seconds
+    uint private auctionLifeTime = 30; // this is in seconds
 
     event DebugEvent(
         string text
@@ -394,7 +395,10 @@ contract AuctionManager {
         */
         uint initalTupleID = tupleID;
         mapping(uint => string) storage tempTupleResult = auction.tupleResult;
-        mapping(string => uint) storage tempServerQuta = auction.serverQuta;
+        for (uint i = 0; i < auction.serverKeys.length; i ++) {
+            auction.tempServerQuta[auction.serverKeys[i]] = auction.serverQuta[auction.serverKeys[i]];
+            console.log(auction.serverKeys[i] , auction.tempServerQuta[auction.serverKeys[i]], auction.serverQuta[auction.serverKeys[i]]);
+        }
         // uint tupleID = auction.mobileKeys[0]; // if not allocated
         //else break
 
@@ -413,9 +417,11 @@ contract AuctionManager {
                     string memory serverName = auction.mobilePriorities[tupleID][i].name;
                     console.log("serverName: ", serverName);
                     uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
-                    if (tupleMips <= tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
+                    console.log("req mips: ", tupleMips, auction.tempServerQuta[serverName]);
+                    if (tupleMips <= auction.tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
                         // tuple is assinged to server
-                        tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
+                        auction.tempServerQuta[serverName] = auction.tempServerQuta[serverName] - tupleMips;
+                        console.log("new server quota after: ", auction.tempServerQuta[serverName]);
                         tempTupleResult[tupleID] = serverName;
                         tupleNotAssigned = false;
                         // T0 => S1 => T?  => ... T =/ S T=>S=/T?
@@ -468,12 +474,17 @@ contract AuctionManager {
                     // T1 -> S2 -> T0 -> S4 -> T15 -> S4:circleStartServer -> T15 
                     // add new results to actual results
                     uint tupleRoundingID = auction.serverResult[circleStartServer];
+                    console.log("Assigning foundings here ==== ");
                     while (true) {
                         auction.tupleResult[tupleRoundingID] = tempTupleResult[tupleRoundingID];
                         auction.assingedTuples.push(tupleRoundingID);
+                        console.log("ASSIGEND TUPLE: ", tupleRoundingID, auction.tupleResult[tupleRoundingID]);
                         uint tupleMips = auction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
                         auction.serverQuta[tempTupleResult[tupleRoundingID]] = auction.serverQuta[tempTupleResult[tupleRoundingID]] - tupleMips;
+                        console.log("Temp Quta: ", tempTupleResult[tupleRoundingID], auction.tempServerQuta[tempTupleResult[tupleRoundingID]]);
+                        console.log("QUTA CHANGED: ", tupleMips, auction.serverQuta[tempTupleResult[tupleRoundingID]]);
                         if (keccak256(abi.encodePacked((tempTupleResult[tupleRoundingID]))) == keccak256(abi.encodePacked((circleStartServer)))) {
+                            console.log("breaking the circle here");
                             break;
                         }
                         tupleRoundingID = auction.serverResult[tempTupleResult[tupleRoundingID]];
@@ -483,6 +494,7 @@ contract AuctionManager {
                 if (tupleNotAssigned) {
                     // Tuple not assigned to any server
                     // Result T => !!
+                    console.log(" TUPLE not assigned at all");
                     auction.assingedTuples.push(tupleID);
                     break;
                 }
@@ -497,6 +509,7 @@ contract AuctionManager {
             if (initialTupleWasAssigned) {
                 break;
             } else {
+                console.log("INITIAL TUPLE WAS NOT ASSIGEND STARTING OVER");
                 tupleID = initalTupleID;
             }
         }

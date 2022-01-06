@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 import "hardhat/console.sol";
-import "../abdk-libraries-solidity/ABDKMathQuad.sol";
 import "../abdk-libraries-solidity/ABDKMath64x64.sol";
+import "../abdk-libraries-solidity/ABDKMathQuad.sol";
+// import "prb-math/contracts/PRBMathSD59x18.sol";
+import "prb-math/contracts/PRBMathSD59x18Typed.sol";
 
 contract AuctionManager {
     /*
@@ -36,6 +38,9 @@ contract AuctionManager {
             the contract, 2. not possible because the last person calling the contract will
             be heavilly gased.
     */
+    
+    // using PRBMathSD59x18 for uint256;
+    using PRBMathSD59x18Typed for PRBMath.SD59x18;
     
     struct ServerPriorityBlock {
         string name;
@@ -80,6 +85,12 @@ contract AuctionManager {
         uint offer;
 
         uint ueUpBW;
+
+        uint xCoordinate;
+        uint yCoordinate;
+
+        uint ueTransmissionPower;
+
     }
 
     struct TupleMappingMips {
@@ -168,7 +179,8 @@ contract AuctionManager {
 
     function registerMobileTask(
         uint id, uint cpuLength, uint nwLength, uint pesNumber, uint outputSize,
-        uint deadline, uint offer, uint ueUpBW
+        uint deadline, uint offer, uint ueUpBW, uint xCoordinate, uint yCoordinate,
+        uint ueTransmissionPower
     ) public {
         // we does not check if this task is already registered in active autcion
         /*
@@ -214,7 +226,7 @@ contract AuctionManager {
         requestAuction();
         auctions[activeAuction].mobileTasks[id] = MobileTask(
             id, cpuLength, nwLength, pesNumber, outputSize, deadline,
-            offer, ueUpBW
+            offer, ueUpBW, xCoordinate, yCoordinate, ueTransmissionPower
         );
         auctions[activeAuction].mobileKeys.push(id);
         createTuplePriorities(auctions[activeAuction].mobileTasks[id]);
@@ -264,10 +276,13 @@ contract AuctionManager {
     function registerServerNode(
         string memory name, uint busyPower, // float
         uint downBw, uint idlePower, // float
-        uint level, uint mips, uint ram,
-        uint ratePerMips, // float
-        uint upLinkLatency, uint areaId,
-        uint joinDelay, uint xCoordinate,
+        // uint level,
+         uint mips, uint ram,
+        // uint ratePerMips, // float
+        uint upLinkLatency,
+        //  uint areaId
+        // uint joinDelay,
+        uint xCoordinate,
         uint yCoordinate , uint offer
     ) public {
         // we does not check if this name already is registered in this auction
@@ -285,9 +300,9 @@ contract AuctionManager {
         */
         requestAuction();
         auctions[activeAuction].serverNodes[name] = ServerNode(
-            name, busyPower, downBw, idlePower, level,
-            mips, ram, ratePerMips, upLinkLatency, areaId,
-            joinDelay, xCoordinate, yCoordinate, offer
+            name, busyPower, downBw, idlePower, 0,
+            mips, ram, 0, upLinkLatency, 0,
+            0, xCoordinate, yCoordinate, offer
         );
         console.log("REGISTERING A SERVER");
         auctions[activeAuction].serverKeys.push(name);
@@ -319,7 +334,7 @@ contract AuctionManager {
         }
     }
     function log2(uint x) private returns (uint y){
-    assembly {
+        assembly {
             let arg := x
             x := sub(x,1)
             x := or(x, div(x, 0x02))
@@ -350,36 +365,49 @@ contract AuctionManager {
     }
     function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private returns (uint) {
         console.log("********* tuple mips &&&&&&&&&&&&&&&&&&");
-        console.log(tuple.deadline, server.xCoordinate);
+        console.log(server.xCoordinate, server.yCoordinate);
+        console.log(tuple.xCoordinate, tuple.yCoordinate);
+        console.log(tuple.nwLength);
         console.log(tuple.ueUpBW);
-        // console.log(ABDKMathQuad.toUInt(ABDKMathQuad.div(ABDKMathQuad.fromUInt(ABDKMathQuad.109), ABDKMathQuad.fromUInt(10))));
-        uint256 distance = 3;
-        // console.log(ABDKMathQuad.toInt(ABDKMathQuad.cmp(ABDKMathQuad.fromInt(0.001), ABDKMathQuad.fromInt(0.002))));
-        // cpulength / (deadline - up * log2(ABD(1 + power * 10 ** 13) / ABD((2 * distance ** 4))))
-        // console.log(uint256(ABDKMathQuad.toInt(
-        //         ABDKMathQuad.sub(
-        //             ABDKMathQuad.div(ABDKMathQuad.fromInt(1), ABDKMathQuad.fromInt(3)), 
-        //             ABDKMathQuad.div(ABDKMathQuad.fromInt(1), ABDKMathQuad.fromInt(20 ** 4))
-        //         )
-        // )));
-        // console.log(uint256(ABDKMathQuad.toInt()));
-        bytes16 a1 = ABDKMathQuad.div(ABDKMathQuad.fromInt(1), ABDKMathQuad.fromInt(3));
-        bytes16 a2 = ABDKMathQuad.div(ABDKMathQuad.fromInt(1), ABDKMathQuad.fromInt(10 ** 13));
-        bytes16 a3 = ABDKMathQuad.sub(a1, a2);
-        // bytes16 a4 = ABDKMathQuad.mul(ABDKMathQuad.fromInt(1000), a3);
-        // console.log(uint256(ABDKMathQuad.toInt(a3)) * 1000);
-        console.log(uint256(ABDKMathQuad.toInt(ABDKMathQuad.log_2(ABDKMathQuad.fromInt(1)))));
-        // console.log(uint256(ABDKMathQuad.toInt(a3)));
-        // bytes16 a4 = ABDKMathQuad.mul(ABDKMathQuad.fromInt(1000), a3);
-        // console.log(uint256(ABDKMathQuad.toInt(
-        //     ABDKMathQuad.mul(
-        //         ABDKMathQuad.fromInt(1000), 
-        //         ABDKMathQuad.sub(
-        //             ABDKMathQuad.fromInt(101),
-        //             ABDKMathQuad.fromInt(10)
-        //         )
-        //     )
-        // )));
+        console.log(tuple.ueTransmissionPower);
+        console.log("***********************");
+        // ((tuple.x - server.x) ** 2 + (tuple.y - server.y) ** 2) ** 0.5
+        bytes16 distX = ABDKMathQuad.fromInt(int256(tuple.xCoordinate) - int256(server.xCoordinate));
+        bytes16 distY =  ABDKMathQuad.fromInt(int256(tuple.yCoordinate) - int256(server.yCoordinate));
+        bytes16 distplus = ABDKMathQuad.add(
+            ABDKMathQuad.mul(distX, distX), 
+            ABDKMathQuad.mul(distY, distY)
+        );
+        bytes16 distplus2 = ABDKMathQuad.mul(distplus, distplus);
+        bytes16 distplus6 = ABDKMathQuad.mul(
+            ABDKMathQuad.mul(
+               distplus2, distplus2 
+            ), 
+            distplus2
+        );
+        bytes16 noisePowerm1 = ABDKMathQuad.fromInt(5 * 10 ** 11);
+        bytes16 loggvalue = ABDKMathQuad.log_2(ABDKMathQuad.add(
+            ABDKMathQuad.fromInt(1),
+            ABDKMathQuad.div(
+                ABDKMathQuad.mul(
+                    ABDKMathQuad.fromInt(int256(tuple.ueTransmissionPower)),
+                    noisePowerm1
+                ),
+                distplus6
+            )
+        ));
+        bytes16 t_ij_transmit = ABDKMathQuad.div(
+            ABDKMathQuad.fromInt(int256(tuple.nwLength)),
+            ABDKMathQuad.mul(
+                ABDKMathQuad.fromInt(int256(tuple.ueUpBW)), loggvalue
+            )
+        );
+        console.log(uint256(ABDKMathQuad.toInt(
+            ABDKMathQuad.mul(
+                t_ij_transmit, ABDKMathQuad.fromInt(1000)
+            )
+        )));
+        // t_ij_transmit ==> input/(upload*log(1+((power*noisem1)/(distanceplus6))))
         return 666;
     }
 

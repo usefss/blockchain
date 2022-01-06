@@ -28,12 +28,15 @@ contract('Auction manager test', (accounts) => {
             result = await this.manager.registerMobileTask(
                 i,
                 i, // cpu length
-                i, // nw length
+                i * 1000, // nw length
                 i, // pes number
                 i, // output number
-                i, // deadline
+                i, //deadline
                 i, //offer
-                i, // ue up bw
+                i * 5000, // ue up bw
+                i + 3, //x
+                i + 9, //y
+                i * 4, // ue trans powerr
             )
             // evnt = result.logs[0].args
             // assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -51,10 +54,13 @@ contract('Auction manager test', (accounts) => {
             result = await this.manager.registerServerNode(
                 _name, i, // name, busy power
                 i, i, // down bw, idle power
-                i, i * 100, i, // level, mips, ram
-                i, // rate per mips
-                i, i, // up link latency, area id
-                i, i, // join delay, x,
+                // i, //  level
+                i * 100, i, //, mips, ram
+                // i, // rate per mips
+                i,//up link latency
+                //  i, // , area id
+                // i, // join delay
+                 i, // , x,
                 i, i     // y, offer
             )
             // evnt = result.logs[0].args
@@ -71,12 +77,15 @@ contract('Auction manager test', (accounts) => {
             result = await this.manager.registerMobileTask(
                 i,
                 i, // cpu length
-                i, // nw length
+                i * 1000, // nw length
                 i, // pes number
                 i, // output number
                 i, //deadline
                 i, //offer
-                i, // ue up bw
+                i * 5000, // ue up bw
+                i, //x
+                i, //y
+                i * 4, // ue trans powerr
             )
             // evnt = result.logs[0].args
             // assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -93,11 +102,14 @@ contract('Auction manager test', (accounts) => {
             result = await this.manager.registerServerNode(
                 _name, i, // name, busy power
                 i, i, // down bw, idle power
-                i, i * 100, i, // level, mips, ram
-                i, // rate per mips
-                i, i, // up link latency, area id
-                i, i, // join delay, x 
-                i, i // y, offer
+                // i, //  level
+                i * 100, i, //, mips, ram
+                // i, // rate per mips
+                i,//up link latency
+                //  i, // , area id
+                // i, // join delay
+                i, // , x,
+                i, i     // y, offer
             )
             // evnt = result.logs[0].args
             // assert.equal(i + 1, evnt.biddersCount.toNumber())

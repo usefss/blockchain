@@ -5,8 +5,8 @@ function sleep(ms) {
 }
 
 tupleIds = []
-tupleNum = 1
-serverNum = 1
+tupleNum = 15
+serverNum = 5
 
 contract('Auction manager test', (accounts) => {
     before(async() => {
@@ -27,16 +27,17 @@ contract('Auction manager test', (accounts) => {
             console.log('registering tuple: ' + i)
             result = await this.manager.registerMobileTask(
                 i,
-                i, // cpu length
+                i * 5000, // cpu length
                 i * 1000, // nw length
-                i, // pes number
+                // i, // pes number
                 i, // output number
-                i, //deadline
+                i * 20, //deadline
                 i, //offer
                 i * 5000, // ue up bw
                 i + 3, //x
-                i + 9, //y
+                i + 15, //y
                 i * 4, // ue trans powerr
+                i, // ue idle power (1-10000)
             )
             // evnt = result.logs[0].args
             // assert.equal(i + 1, evnt.biddersCount.toNumber())
@@ -55,7 +56,7 @@ contract('Auction manager test', (accounts) => {
                 _name, i, // name, busy power
                 i, i, // down bw, idle power
                 // i, //  level
-                i * 100, i, //, mips, ram
+                i * 10000, i, //, mips, ram
                 // i, // rate per mips
                 i,//up link latency
                 //  i, // , area id
@@ -70,54 +71,54 @@ contract('Auction manager test', (accounts) => {
             console.log('gas: ', result.receipt.gasUsed)
         }
     })
-    it('registers mobile task', async () => {
-        for (i = tupleNum + 1; i < tupleNum + tupleNum; i ++) {
-            tupleIds.push(i)
-            console.log('registering tuple: ' + i)
-            result = await this.manager.registerMobileTask(
-                i,
-                i, // cpu length
-                i * 1000, // nw length
-                i, // pes number
-                i, // output number
-                i, //deadline
-                i, //offer
-                i * 5000, // ue up bw
-                i, //x
-                i, //y
-                i * 4, // ue trans powerr
-            )
-            // evnt = result.logs[0].args
-            // assert.equal(i + 1, evnt.biddersCount.toNumber())
-            // console.log('auction: ', evnt.auctionID.toNumber())
-            // console.log('bidders: ', evnt.biddersCount.toNumber())
-            console.log('gas: ', result.receipt.gasUsed)
-        }
-    })
-    it('registers server nodes', async () => {
-        serverName = 'name'
-        for(i = serverNum + 1; i < serverNum + serverNum; i ++ ) {
-            _name = serverName + '_' + i
-            console.log('registering server: ' + _name)
-            result = await this.manager.registerServerNode(
-                _name, i, // name, busy power
-                i, i, // down bw, idle power
-                // i, //  level
-                i * 100, i, //, mips, ram
-                // i, // rate per mips
-                i,//up link latency
-                //  i, // , area id
-                // i, // join delay
-                i, // , x,
-                i, i     // y, offer
-            )
-            // evnt = result.logs[0].args
-            // assert.equal(i + 1, evnt.biddersCount.toNumber())
-            // console.log('auction: ', evnt.auctionID.toNumber())
-            // console.log('bidders: ', evnt.biddersCount.toNumber())
-            console.log('gas: ', result.receipt.gasUsed)
-        }
-    })
+    // it('registers mobile task', async () => {
+    //     for (i = tupleNum + 1; i < tupleNum + tupleNum; i ++) {
+    //         tupleIds.push(i)
+    //         console.log('registering tuple: ' + i)
+    //         result = await this.manager.registerMobileTask(
+    //             i,
+    //             i, // cpu length
+    //             i * 1000, // nw length
+    //             i, // pes number
+    //             i, // output number
+    //             i, //deadline
+    //             i, //offer
+    //             i * 5000, // ue up bw
+    //             i, //x
+    //             i, //y
+    //             i * 4, // ue trans powerr
+    //         )
+    //         // evnt = result.logs[0].args
+    //         // assert.equal(i + 1, evnt.biddersCount.toNumber())
+    //         // console.log('auction: ', evnt.auctionID.toNumber())
+    //         // console.log('bidders: ', evnt.biddersCount.toNumber())
+    //         console.log('gas: ', result.receipt.gasUsed)
+    //     }
+    // })
+    // it('registers server nodes', async () => {
+    //     serverName = 'name'
+    //     for(i = serverNum + 1; i < serverNum + serverNum; i ++ ) {
+    //         _name = serverName + '_' + i
+    //         console.log('registering server: ' + _name)
+    //         result = await this.manager.registerServerNode(
+    //             _name, i, // name, busy power
+    //             i, i, // down bw, idle power
+    //             // i, //  level
+    //             i * 100, i, //, mips, ram
+    //             // i, // rate per mips
+    //             i,//up link latency
+    //             //  i, // , area id
+    //             // i, // join delay
+    //             i, // , x,
+    //             i, i     // y, offer
+    //         )
+    //         // evnt = result.logs[0].args
+    //         // assert.equal(i + 1, evnt.biddersCount.toNumber())
+    //         // console.log('auction: ', evnt.auctionID.toNumber())
+    //         // console.log('bidders: ', evnt.biddersCount.toNumber())
+    //         console.log('gas: ', result.receipt.gasUsed)
+    //     }
+    // })
 
     it('auction result', async () => {
         for (j = 0; j < tupleIds.length; j ++) {

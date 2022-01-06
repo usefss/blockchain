@@ -77,7 +77,7 @@ contract AuctionManager {
 
         uint cpuLength;
         uint nwLength;
-        uint pesNumber;
+        // uint pesNumber;
         uint outputSize;
 
         uint deadline;
@@ -90,7 +90,7 @@ contract AuctionManager {
         uint yCoordinate;
 
         uint ueTransmissionPower;
-
+        uint ueIdlePower;
     }
 
     struct TupleMappingMips {
@@ -178,9 +178,11 @@ contract AuctionManager {
     );
 
     function registerMobileTask(
-        uint id, uint cpuLength, uint nwLength, uint pesNumber, uint outputSize,
+        uint id, uint cpuLength, uint nwLength, 
+        // uint pesNumber,
+         uint outputSize,
         uint deadline, uint offer, uint ueUpBW, uint xCoordinate, uint yCoordinate,
-        uint ueTransmissionPower
+        uint ueTransmissionPower, uint ueIdlePower
     ) public {
         // we does not check if this task is already registered in active autcion
         /*
@@ -225,8 +227,11 @@ contract AuctionManager {
         console.log("REGISTER TUPLE......");
         requestAuction();
         auctions[activeAuction].mobileTasks[id] = MobileTask(
-            id, cpuLength, nwLength, pesNumber, outputSize, deadline,
-            offer, ueUpBW, xCoordinate, yCoordinate, ueTransmissionPower
+            id, cpuLength, nwLength, 
+            // pesNumber, 
+            outputSize, deadline,
+            offer, ueUpBW, xCoordinate, yCoordinate, ueTransmissionPower,
+            ueIdlePower
         );
         auctions[activeAuction].mobileKeys.push(id);
         createTuplePriorities(auctions[activeAuction].mobileTasks[id]);
@@ -333,7 +338,7 @@ contract AuctionManager {
             console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
         }
     }
-    function log2(uint x) private returns (uint y){
+    function log2(uint x) private pure returns (uint y){
         assembly {
             let arg := x
             x := sub(x,1)
@@ -363,52 +368,17 @@ contract AuctionManager {
             y := add(y, mul(256, gt(arg, 0x8000000000000000000000000000000000000000000000000000000000000000)))
         }  
     }
-    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private returns (uint) {
-        console.log("********* tuple mips &&&&&&&&&&&&&&&&&&");
-        console.log(server.xCoordinate, server.yCoordinate);
-        console.log(tuple.xCoordinate, tuple.yCoordinate);
-        console.log(tuple.nwLength);
-        console.log(tuple.ueUpBW);
-        console.log(tuple.ueTransmissionPower);
-        console.log("***********************");
-        // ((tuple.x - server.x) ** 2 + (tuple.y - server.y) ** 2) ** 0.5
-        bytes16 distX = ABDKMathQuad.fromInt(int256(tuple.xCoordinate) - int256(server.xCoordinate));
-        bytes16 distY =  ABDKMathQuad.fromInt(int256(tuple.yCoordinate) - int256(server.yCoordinate));
-        bytes16 distplus = ABDKMathQuad.add(
-            ABDKMathQuad.mul(distX, distX), 
-            ABDKMathQuad.mul(distY, distY)
-        );
-        bytes16 distplus2 = ABDKMathQuad.mul(distplus, distplus);
-        bytes16 distplus6 = ABDKMathQuad.mul(
-            ABDKMathQuad.mul(
-               distplus2, distplus2 
-            ), 
-            distplus2
-        );
-        bytes16 noisePowerm1 = ABDKMathQuad.fromInt(5 * 10 ** 11);
-        bytes16 loggvalue = ABDKMathQuad.log_2(ABDKMathQuad.add(
-            ABDKMathQuad.fromInt(1),
-            ABDKMathQuad.div(
-                ABDKMathQuad.mul(
-                    ABDKMathQuad.fromInt(int256(tuple.ueTransmissionPower)),
-                    noisePowerm1
-                ),
-                distplus6
-            )
-        ));
-        bytes16 t_ij_transmit = ABDKMathQuad.div(
-            ABDKMathQuad.fromInt(int256(tuple.nwLength)),
-            ABDKMathQuad.mul(
-                ABDKMathQuad.fromInt(int256(tuple.ueUpBW)), loggvalue
-            )
-        );
-        console.log(uint256(ABDKMathQuad.toInt(
-            ABDKMathQuad.mul(
-                t_ij_transmit, ABDKMathQuad.fromInt(1000)
-            )
-        )));
-        // t_ij_transmit ==> input/(upload*log(1+((power*noisem1)/(distanceplus6))))
-        return 666;
+    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private view returns (uint) {
+        int distplus6 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
+                        + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
+        uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
+        uint t_ij_transmit = tuple.nwLength / (logvint * tuple.ueUpBW);
+        console.log("******* MIPS ON SERVER ******");
+        console.log(tuple.cpuLength, tuple.deadline);
+        console.log(t_ij_transmit);
+        uint mps = tuple.cpuLength / (tuple.deadline - t_ij_transmit);
+        console.log(mps);
+        return mps;
     }
 
     function createServerPriorities(ServerNode memory server) private {
@@ -455,20 +425,124 @@ contract AuctionManager {
         // this must add priorityBlock to Auction.serverPriorities in a sorted way later
         auctions[activeAuction].mobilePriorities[tupleID].push(priorityBlock); // TODO
     }
-    function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint) {
+    function tupleCost(MobileTask memory tuple, ServerNode memory server) private view returns (uint) {
         /* 
             this value shows that how much a tuple likes to get picked by a server
             this is used in mobilePriorities
         */
-        return 1000000 - server.offer; // TODO
+        console.log("********* tuple mips &&&&&&&&&&&&&&&&&&");
+        console.log(server.xCoordinate, server.yCoordinate);
+        console.log(tuple.xCoordinate, tuple.yCoordinate);
+        console.log(tuple.nwLength);
+        console.log(tuple.ueUpBW);
+        console.log(tuple.ueTransmissionPower);
+        console.log(tuple.cpuLength, server.mips);
+        console.log("***********************");
+        // ((tuple.x - server.x) ** 2 + (tuple.y - server.y) ** 2) ** 0.5
+        // bytes16 distX = ABDKMathQuad.fromInt(int256(tuple.xCoordinate) - int256(server.xCoordinate));
+        // bytes16 distY =  ABDKMathQuad.fromInt(int256(tuple.yCoordinate) - int256(server.yCoordinate));
+        // bytes16 distplus = ABDKMathQuad.add(
+        //     ABDKMathQuad.mul(distX, distX), 
+        //     ABDKMathQuad.mul(distY, distY)
+        // );
+        // bytes16 distplus2 = ABDKMathQuad.mul(distplus, distplus);
+        // bytes16 distplus6 = ABDKMathQuad.mul(
+        //     ABDKMathQuad.mul(
+        //        distplus2, distplus2 
+        //     ), 
+        //     distplus2
+        // );
+        // distplus6 = ABDKMathQuad.fromInt(ABDKMathQuad.toInt(distplus6));
+        int distplus6 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
+                                + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
+        // // bytes16 distplus6 = ABDKMathQuad.fromInt(531441000000);
+        // bytes16 loggvalue = ABDKMathQuad.log_2(ABDKMathQuad.add(
+        //     ABDKMathQuad.fromInt(2),
+        //     ABDKMathQuad.div(
+        //         ABDKMathQuad.mul(
+        //             ABDKMathQuad.fromInt(int256(tuple.ueTransmissionPower)),
+        //             ABDKMathQuad.fromInt(500000000000)
+        //         ),
+        //         distplus6
+        //     )
+        // ));
+        // uint256 logvint = uint256(ABDKMathQuad.toInt(loggvalue));
+        uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
+        console.log(logvint);
+        uint t_ij_transmit = (1000000 * tuple.nwLength) / (logvint * tuple.ueUpBW);
+        console.log(t_ij_transmit);
+        // int256 t_ij_transmit = int256((1000*tuple.nwLength) / (logvint * tuple.ueUpBW));
+        // console.log(uint256(t_ij_transmit));
+        // int256 t_ij_transmit = ABDKMathQuad.toInt(ABDKMathQuad.div(
+        //     ABDKMathQuad.fromInt(int256(tuple.nwLength * 1000)),
+        //     ABDKMathQuad.mul(
+        //         ABDKMathQuad.fromInt(int256(tuple.ueUpBW)), loggvalue
+        //     )
+        // ));
+        // int256 t_ij_process = ABDKMathQuad.toInt(ABDKMathQuad.div(
+        //     ABDKMathQuad.fromInt(int256(tuple.cpuLength * 1000)),
+        //     ABDKMathQuad.fromInt(int256(server.mips))
+        // ));
+        uint t_ij_process = (1000000 * tuple.cpuLength) / server.mips;
+        console.log(t_ij_process);
+        // bytes16 t_ij_offload = ABDKMathQuad.add(
+        //     t_ij_transmit,
+        //     t_ij_process
+        // );
+        uint t_ij_offload_norm = (t_ij_transmit + t_ij_process) / tuple.deadline;
+        console.log("offlloaddd : ", t_ij_offload_norm);
+        uint e_ij_offload_norm = (t_ij_transmit * tuple.ueTransmissionPower * 100 
+                            + t_ij_process * tuple.ueIdlePower) / 
+                                        (tuple.deadline * (tuple.ueTransmissionPower * 100 + tuple.ueIdlePower));
+        // console.log(t_ij_transmit * tuple.ueTransmissionPower / 10);
+        // console.log(t_ij_process * tuple.ueIdlePower / 10000);
+        console.log("energy offload: ", e_ij_offload_norm);
+        // bytes16 ml = ABDKMathQuad.mul(
+        //     t_ij_offload_norm, ABDKMathQuad.fromInt(1000)
+        // );
+        // int256 d = ABDKMathQuad.toInt(t_ij_offload_norm);
+        // console.log(uint256(ABDKMathQuad.toInt(
+        //     ABDKMathQuad.mul(
+        //         t_ij_offload_norm, ABDKMathQuad.fromInt(1000)
+        //     )
+        // )));
+        // t_ij_transmit ==> input * 1000/(upload* 100 * log(1+((power*noisem1:A)/(distanceplus6:B))) ** 10)
+        // n * log(x) ==> log x ** n??? 4 * log 2 ==> log 2 ** 4
+        // 1 + a/b ==> (b+a)/b
+        // log a/b ==> log a - log b
+        // => log (A+B) - log B
+        // t_ij_transmit ==> input / (upload * (log(power*noisem1 + distplus6) - log(distplus6)))
+        // uint b = log2(34012224000000000002000000000000);
+        // console.log(b);
+        uint pref = t_ij_offload_norm + e_ij_offload_norm + server.offer * 1000; // (server.offer/1000) * 1000000
+        console.log("server, tuple ID: ", server.name, tuple.id);
+        console.log("TUPLE PREFRENCE ON SERVER: ", pref);
+        // sort 100 200 300 ...
+        return pref;
     }
-
-    function serverCost(ServerNode memory server, MobileTask memory tuple) private pure returns (uint) {
+    function sqrt(uint x) private pure returns (uint y) {
+        uint z = (x + 1) / 2;
+        y = x;
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
+        }
+    }
+    function serverCost(ServerNode memory server, MobileTask memory tuple) private returns (uint) {
         /*
             this value shows that how much the server likes to take the tuple
             this is used in serverPriorities
         */
-        return tuple.offer * tuple.nwLength; // TODO
+        // int distplus2m1 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
+        //                 + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
+        // return 1000000 + tuple.offer * 1000 + max * 2 / distplus2m1;
+        int dist = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
+                        + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2);
+        uint cost =  uint128(1000000 + tuple.offer * 1000 - 2357 * sqrt(uint(dist)));
+        // 900 800 700 ...
+        console.log("***** SERVER COST ******");
+        console.log("SERver PREF: ", cost);
+        return cost;
     }
 
     function auctionResultTuple(uint auctionID, uint tupleID) public {

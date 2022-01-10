@@ -7,7 +7,8 @@
     "url": "git+https://github.com/usefss/blockchain.git"
   },
   "scripts": {
-    "ganache": "ganache-cli -d --db ./ganache/data/ -i 1111 --accounts 20 --deterministic --mnemonic=SEED_FOR_ACCOUNTS"
+    "ganache": "ganache-cli -d --db ./ganache/data/ -i 1111 --accounts 20 --deterministic --mnemonic=SEED_FOR_ACCOUNTS",
+    "solc": "solc"
   },
   "author": "Yosef SL",
   "license": "ISC",
@@ -21,6 +22,7 @@
     "nodemon": "^2.0.13"
   },
   "dependencies": {
-    "prb-math": "^2.4.1"
+    "prb-math": "^2.4.1",
+    "solc": "^0.8.4"
   }
 }

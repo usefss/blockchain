@@ -24,6 +24,9 @@ truffle migrate --reset
 ```
 If you have problems with solidity compiler version for truffle, you can checkout [this](https://ethereum.stackexchange.com/questions/17551/how-to-upgrade-solidity-compiler-in-truffle/47244). 
 
+* abi and bin
+Generate abi and bin off contract with gen_bin.sh.
+
 * Testing
 ```
 truffle test

@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
-import "hardhat/console.sol";
-import "../abdk-libraries-solidity/ABDKMath64x64.sol";
-import "../abdk-libraries-solidity/ABDKMathQuad.sol";
-// import "prb-math/contracts/PRBMathSD59x18.sol";
-import "prb-math/contracts/PRBMathSD59x18Typed.sol";
+// import "hardhat/console.sol";
 
 contract AuctionManager {
     /*
@@ -38,9 +34,6 @@ contract AuctionManager {
             the contract, 2. not possible because the last person calling the contract will
             be heavilly gased.
     */
-    
-    // using PRBMathSD59x18 for uint256;
-    using PRBMathSD59x18Typed for PRBMath.SD59x18;
     
     struct ServerPriorityBlock {
         string name;
@@ -162,7 +155,7 @@ contract AuctionManager {
     );
 
     event DebugBool(
-        bool boolean
+        bool bbb
     );
 
     event MobileTaskRegistered(
@@ -224,7 +217,7 @@ contract AuctionManager {
                                 break
             - emit success to client 
         */
-        console.log("REGISTER TUPLE......");
+        // console.log("REGISTER TUPLE......");
         requestAuction();
         auctions[activeAuction].mobileTasks[id] = MobileTask(
             id, cpuLength, nwLength, 
@@ -254,8 +247,8 @@ contract AuctionManager {
                 serverCost(auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]], tuple)
             );
             addMobilePriorityBlockSorted(newPriorityBlock, auctions[activeAuction].serverKeys[i]);
-            console.log("update new priority block to server priorities: (serverName, tupleID, cost) ");
-            console.log(auctions[activeAuction].serverKeys[i], tuple.id, newPriorityBlock.cost);
+            // console.log("update new priority block to server priorities: (serverName, tupleID, cost) ");
+            // console.log(auctions[activeAuction].serverKeys[i], tuple.id, newPriorityBlock.cost);
         }
     }
 
@@ -266,15 +259,15 @@ contract AuctionManager {
                 - calculate cost for all tuple -> server(i) pairs and sort them in \
                 mobilePriorities[id].
         */
-        console.log("creating tuple priorities for: ", tuple.id);
+        // console.log("creating tuple priorities for: ", tuple.id);
         for (uint i = 0; i < auctions[activeAuction].serverKeys.length; i ++) {
             ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
                 auctions[activeAuction].serverKeys[i],
                 tupleCost(tuple, auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]])
             );
             addServerPriorityBlockSorted(newPriorityBlock, tuple.id);
-            console.log("pushed new priority block to tuple priorities: (serverName, tupleID, cost) ");
-            console.log(auctions[activeAuction].serverKeys[i], tuple.id, newPriorityBlock.cost);
+            // console.log("pushed new priority block to tuple priorities: (serverName, tupleID, cost) ");
+            // console.log(auctions[activeAuction].serverKeys[i], tuple.id, newPriorityBlock.cost);
        }
     }
 
@@ -309,14 +302,12 @@ contract AuctionManager {
             mips, ram, 0, upLinkLatency, 0,
             0, xCoordinate, yCoordinate, offer
         );
-        console.log("REGISTERING A SERVER");
+        // console.log("REGISTERING A SERVER");
         auctions[activeAuction].serverKeys.push(name);
         createServerPriorities(auctions[activeAuction].serverNodes[name]);
         auctions[activeAuction].serverQuta[name] = mips;
         updateTuplePriorities(auctions[activeAuction].serverNodes[name]);
-        // console.log(auctions[activeAuction].serverPriorities[name][0].id);
         createTupleRequireMips(auctions[activeAuction].serverNodes[name]);
-        // console.log(auctions[activeAuction].mobilePriorities[1][0].name);
         emit ServerNodeRegistered(name, activeAuction, auctions[activeAuction].serverKeys.length);
     }
 
@@ -325,8 +316,8 @@ contract AuctionManager {
             MobileTask memory tuple = auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]];
             // tuple.requireMips += tupleCost(tuple, server);
             auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
-            console.log("add tuple req mips (serverName, tupleID, mips) :");
-            console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
+            // console.log("add tuple req mips (serverName, tupleID, mips) :");
+            // console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
         }
     }
 
@@ -334,8 +325,8 @@ contract AuctionManager {
         for (uint i = 0; i < auctions[activeAuction].serverKeys.length; i ++) {
             ServerNode memory server = auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]];
             auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
-            console.log("update tuple req mips (serverName, tupleID, mips) :");
-            console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
+            // console.log("update tuple req mips (serverName, tupleID, mips) :");
+            // console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
         }
     }
     function log2(uint x) private pure returns (uint y){
@@ -368,16 +359,16 @@ contract AuctionManager {
             y := add(y, mul(256, gt(arg, 0x8000000000000000000000000000000000000000000000000000000000000000)))
         }  
     }
-    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private view returns (uint) {
+    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private pure returns (uint) {
         int distplus6 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
                         + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
         uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
         uint t_ij_transmit = tuple.nwLength / (logvint * tuple.ueUpBW);
-        console.log("******* MIPS ON SERVER ******");
-        console.log(tuple.cpuLength, tuple.deadline);
-        console.log(t_ij_transmit);
+        // console.log("******* MIPS ON SERVER ******");
+        // console.log(tuple.cpuLength, tuple.deadline);
+        // console.log(t_ij_transmit);
         uint mps = tuple.cpuLength / (tuple.deadline - t_ij_transmit);
-        console.log(mps);
+        // console.log(mps);
         return mps;
     }
 
@@ -395,8 +386,8 @@ contract AuctionManager {
                 serverCost(server, auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]])
             );
             addMobilePriorityBlockSorted(newPriorityBlock, server.name);
-            console.log("pushed new priority block to server priorities: (serverName, tupleID, cost) ");
-            console.log(server.name, newPriorityBlock.id, newPriorityBlock.cost);
+            // console.log("pushed new priority block to server priorities: (serverName, tupleID, cost) ");
+            // console.log(server.name, newPriorityBlock.id, newPriorityBlock.cost);
         }
     }
 
@@ -417,27 +408,27 @@ contract AuctionManager {
                 tupleCost(auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]], server)
             );
             addServerPriorityBlockSorted(newPriorityBlock, auctions[activeAuction].mobileKeys[i]);
-            console.log("update with new priority block to tuple priorities: (serverName, tupleID, cost) ");
-            console.log(server.name, auctions[activeAuction].mobileKeys[i], newPriorityBlock.cost);
+            // console.log("update with new priority block to tuple priorities: (serverName, tupleID, cost) ");
+            // console.log(server.name, auctions[activeAuction].mobileKeys[i], newPriorityBlock.cost);
         }
     }
     function addServerPriorityBlockSorted(ServerPriorityBlock memory priorityBlock, uint tupleID) private {
         // this must add priorityBlock to Auction.serverPriorities in a sorted way later
         auctions[activeAuction].mobilePriorities[tupleID].push(priorityBlock); // TODO
     }
-    function tupleCost(MobileTask memory tuple, ServerNode memory server) private view returns (uint) {
+    function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint) {
         /* 
             this value shows that how much a tuple likes to get picked by a server
             this is used in mobilePriorities
         */
-        console.log("********* tuple mips &&&&&&&&&&&&&&&&&&");
-        console.log(server.xCoordinate, server.yCoordinate);
-        console.log(tuple.xCoordinate, tuple.yCoordinate);
-        console.log(tuple.nwLength);
-        console.log(tuple.ueUpBW);
-        console.log(tuple.ueTransmissionPower);
-        console.log(tuple.cpuLength, server.mips);
-        console.log("***********************");
+        // console.log("********* tuple mips &&&&&&&&&&&&&&&&&&");
+        // console.log(server.xCoordinate, server.yCoordinate);
+        // console.log(tuple.xCoordinate, tuple.yCoordinate);
+        // console.log(tuple.nwLength);
+        // console.log(tuple.ueUpBW);
+        // console.log(tuple.ueTransmissionPower);
+        // console.log(tuple.cpuLength, server.mips);
+        // console.log("***********************");
         // ((tuple.x - server.x) ** 2 + (tuple.y - server.y) ** 2) ** 0.5
         // bytes16 distX = ABDKMathQuad.fromInt(int256(tuple.xCoordinate) - int256(server.xCoordinate));
         // bytes16 distY =  ABDKMathQuad.fromInt(int256(tuple.yCoordinate) - int256(server.yCoordinate));
@@ -468,11 +459,10 @@ contract AuctionManager {
         // ));
         // uint256 logvint = uint256(ABDKMathQuad.toInt(loggvalue));
         uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
-        console.log(logvint);
+        // console.log(logvint);
         uint t_ij_transmit = (1000000 * tuple.nwLength) / (logvint * tuple.ueUpBW);
-        console.log(t_ij_transmit);
+        // console.log(t_ij_transmit);
         // int256 t_ij_transmit = int256((1000*tuple.nwLength) / (logvint * tuple.ueUpBW));
-        // console.log(uint256(t_ij_transmit));
         // int256 t_ij_transmit = ABDKMathQuad.toInt(ABDKMathQuad.div(
         //     ABDKMathQuad.fromInt(int256(tuple.nwLength * 1000)),
         //     ABDKMathQuad.mul(
@@ -484,24 +474,21 @@ contract AuctionManager {
         //     ABDKMathQuad.fromInt(int256(server.mips))
         // ));
         uint t_ij_process = (1000000 * tuple.cpuLength) / server.mips;
-        console.log(t_ij_process);
+        // console.log(t_ij_process);
         // bytes16 t_ij_offload = ABDKMathQuad.add(
         //     t_ij_transmit,
         //     t_ij_process
         // );
         uint t_ij_offload_norm = (t_ij_transmit + t_ij_process) / tuple.deadline;
-        console.log("offlloaddd : ", t_ij_offload_norm);
+        // console.log("offlloaddd : ", t_ij_offload_norm);
         uint e_ij_offload_norm = (t_ij_transmit * tuple.ueTransmissionPower * 100 
                             + t_ij_process * tuple.ueIdlePower) / 
                                         (tuple.deadline * (tuple.ueTransmissionPower * 100 + tuple.ueIdlePower));
-        // console.log(t_ij_transmit * tuple.ueTransmissionPower / 10);
-        // console.log(t_ij_process * tuple.ueIdlePower / 10000);
-        console.log("energy offload: ", e_ij_offload_norm);
+        // console.log("energy offload: ", e_ij_offload_norm);
         // bytes16 ml = ABDKMathQuad.mul(
         //     t_ij_offload_norm, ABDKMathQuad.fromInt(1000)
         // );
         // int256 d = ABDKMathQuad.toInt(t_ij_offload_norm);
-        // console.log(uint256(ABDKMathQuad.toInt(
         //     ABDKMathQuad.mul(
         //         t_ij_offload_norm, ABDKMathQuad.fromInt(1000)
         //     )
@@ -513,10 +500,9 @@ contract AuctionManager {
         // => log (A+B) - log B
         // t_ij_transmit ==> input / (upload * (log(power*noisem1 + distplus6) - log(distplus6)))
         // uint b = log2(34012224000000000002000000000000);
-        // console.log(b);
         uint pref = t_ij_offload_norm + e_ij_offload_norm + server.offer * 1000; // (server.offer/1000) * 1000000
-        console.log("server, tuple ID: ", server.name, tuple.id);
-        console.log("TUPLE PREFRENCE ON SERVER: ", pref);
+        // console.log("server, tuple ID: ", server.name, tuple.id);
+        // console.log("TUPLE PREFRENCE ON SERVER: ", pref);
         // sort 100 200 300 ...
         return pref;
     }
@@ -528,7 +514,7 @@ contract AuctionManager {
             z = (x / z + z) / 2;
         }
     }
-    function serverCost(ServerNode memory server, MobileTask memory tuple) private returns (uint) {
+    function serverCost(ServerNode memory server, MobileTask memory tuple) private pure returns (uint) {
         /*
             this value shows that how much the server likes to take the tuple
             this is used in serverPriorities
@@ -540,8 +526,8 @@ contract AuctionManager {
                         + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2);
         uint cost =  uint128(1000000 + tuple.offer * 1000 - 2357 * sqrt(uint(dist)));
         // 900 800 700 ...
-        console.log("***** SERVER COST ******");
-        console.log("SERver PREF: ", cost);
+        // console.log("***** SERVER COST ******");
+        // console.log("SERver PREF: ", cost);
         return cost;
     }
 
@@ -583,33 +569,33 @@ contract AuctionManager {
         uint initalTupleID = tupleID;
         for (uint i = 0; i < auction.serverKeys.length; i ++) {
             tempServerQuta[auction.serverKeys[i]] = auction.serverQuta[auction.serverKeys[i]];
-            console.log(auction.serverKeys[i] , tempServerQuta[auction.serverKeys[i]], auction.serverQuta[auction.serverKeys[i]]);
+            // console.log(auction.serverKeys[i] , tempServerQuta[auction.serverKeys[i]], auction.serverQuta[auction.serverKeys[i]]);
         }
         // uint tupleID = auction.mobileKeys[0]; // if not allocated
         //else break
-        console.log("TEST");
+        // console.log("TEST");
         while (true) {
-            console.log("tupleID: ", tupleID);
+            // console.log("tupleID: ", tupleID);
             while (true) {
                 bool tupleNotAssigned = true;
                 bool foundCircle = false;
                 string memory circleStartServer = "";
-                console.log("where it failds?");
-                console.log(auction.serverKeys.length);
-                console.log(auction.mobileKeys.length);
+                // console.log("where it failds?");
+                // console.log(auction.serverKeys.length);
+                // console.log(auction.mobileKeys.length);
                 for (uint i = 0; i < auction.serverKeys.length; i ++) {
                     // find the tuple => server? and then server? => tuple
-                    console.log("before for loop tuple priorities ", tupleID, i);
-                    console.log(auction.mobilePriorities[tupleID].length);
-                    console.log(auction.mobilePriorities[tupleID][i].cost);
+                    // console.log("before for loop tuple priorities ", tupleID, i);
+                    // console.log(auction.mobilePriorities[tupleID].length);
+                    // console.log(auction.mobilePriorities[tupleID][i].cost);
                     string memory serverName = auction.mobilePriorities[tupleID][i].name;
-                    console.log("serverName: ", serverName);
+                    // console.log("serverName: ", serverName);
                     uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
-                    console.log("req mips: ", tupleMips, tempServerQuta[serverName]);
+                    // console.log("req mips: ", tupleMips, tempServerQuta[serverName]);
                     if (tupleMips <= tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
                         // tuple is assinged to server
                         tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
-                        console.log("new server quota after: ", tempServerQuta[serverName]);
+                        // console.log("new server quota after: ", tempServerQuta[serverName]);
                         tempTupleResult[tupleID] = serverName;
                         tupleNotAssigned = false;
                         // T0 => S1 => T?  => ... T =/ S T=>S=/T?
@@ -628,19 +614,19 @@ contract AuctionManager {
                                 break;
                             }
                         }
-                        console.log("trying to find circle");
+                        // console.log("trying to find circle");
                         string memory serverRounding = serverName;
                         while (true) {
                             // find out if a circle is created
                             // we check with old nodes NOTE
-                            console.log("serverRounding: ", serverRounding);
+                            // console.log("serverRounding: ", serverRounding);
                             if (auction.serverResult[serverRounding] != 0) {
-                                console.log("tuple rounding: ", auction.serverResult[serverRounding]);
+                                // console.log("tuple rounding: ", auction.serverResult[serverRounding]);
                                 if (bytes(tempTupleResult[auction.serverResult[serverRounding]]).length > 0) {
                                     serverRounding = tempTupleResult[auction.serverResult[serverRounding]];
-                                    console.log("compare", serverRounding, serverName);
+                                    // console.log("compare", serverRounding, serverName);
                                     if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((serverName)))) {
-                                        console.log("was same");
+                                        // console.log("was same");
                                         foundCircle = true;
                                         circleStartServer = serverName;
                                         break;
@@ -648,7 +634,7 @@ contract AuctionManager {
                                 } else break;
                             } else break;
                         }
-                        console.log("foundCircle: ", foundCircle);
+                        // console.log("foundCircle: ", foundCircle);
                         break;
                     }
                 }
@@ -662,17 +648,17 @@ contract AuctionManager {
                     // T1 -> S2 -> T0 -> S4 -> T15 -> S4:circleStartServer -> T15 
                     // add new results to actual results
                     uint tupleRoundingID = auction.serverResult[circleStartServer];
-                    console.log("Assigning foundings here ==== ");
+                    // console.log("Assigning foundings here ==== ");
                     while (true) {
                         auction.tupleResult[tupleRoundingID] = tempTupleResult[tupleRoundingID];
                         auction.assingedTuples.push(tupleRoundingID);
-                        console.log("ASSIGEND TUPLE: ", tupleRoundingID, auction.tupleResult[tupleRoundingID]);
+                        // console.log("ASSIGEND TUPLE: ", tupleRoundingID, auction.tupleResult[tupleRoundingID]);
                         uint tupleMips = auction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
                         auction.serverQuta[tempTupleResult[tupleRoundingID]] = auction.serverQuta[tempTupleResult[tupleRoundingID]] - tupleMips;
-                        console.log("Temp Quta: ", tempTupleResult[tupleRoundingID], tempServerQuta[tempTupleResult[tupleRoundingID]]);
-                        console.log("QUTA CHANGED: ", tupleMips, auction.serverQuta[tempTupleResult[tupleRoundingID]]);
+                        // console.log("Temp Quta: ", tempTupleResult[tupleRoundingID], tempServerQuta[tempTupleResult[tupleRoundingID]]);
+                        // console.log("QUTA CHANGED: ", tupleMips, auction.serverQuta[tempTupleResult[tupleRoundingID]]);
                         if (keccak256(abi.encodePacked((tempTupleResult[tupleRoundingID]))) == keccak256(abi.encodePacked((circleStartServer)))) {
-                            console.log("breaking the circle here");
+                            // console.log("breaking the circle here");
                             break;
                         }
                         tupleRoundingID = auction.serverResult[tempTupleResult[tupleRoundingID]];
@@ -682,7 +668,7 @@ contract AuctionManager {
                 if (tupleNotAssigned) {
                     // Tuple not assigned to any server
                     // Result T => !!
-                    console.log(" TUPLE not assigned at all");
+                    // console.log(" TUPLE not assigned at all");
                     auction.assingedTuples.push(tupleID);
                     break;
                 }
@@ -697,7 +683,7 @@ contract AuctionManager {
             if (initialTupleWasAssigned) {
                 break;
             } else {
-                console.log("INITIAL TUPLE WAS NOT ASSIGEND STARTING OVER");
+                // console.log("INITIAL TUPLE WAS NOT ASSIGEND STARTING OVER");
                 tupleID = initalTupleID;
             }
         }

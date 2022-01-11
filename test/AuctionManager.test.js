@@ -5,7 +5,7 @@ function sleep(ms) {
 }
 
 tupleIds = []
-tupleNum = 10
+tupleNum = 30
 serverNum = 3
 
 contract('Auction manager test', (accounts) => {
@@ -54,7 +54,7 @@ contract('Auction manager test', (accounts) => {
     it('registers mobile task', async () => {
         for (j = 1; j < tupleNum + 1; j ++) {
             i = Math.floor(Math.random() * 11) + 10
-            console.log(i)
+            console.log(j, i)
             tupleIds.push(j)
             console.log('registering tuple: ' + i)
             result = await this.manager.registerMobileTask(
@@ -76,8 +76,8 @@ contract('Auction manager test', (accounts) => {
             // console.log('auction: ', evnt.auctionID.toNumber())
             // console.log('bidders: ', evnt.biddersCount.toNumber())
             console.log('gas: ', result.receipt.gasUsed)
-            console.log(result.logs.length)
-            console.log(result.logs[0])
+            // console.log(result.logs.length)
+            // console.log(result.logs[0])
         }
     })
 

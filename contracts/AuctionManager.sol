@@ -755,6 +755,7 @@ contract AuctionManager {
                     log(" TUPLE not assigned at all");
                     auction.assingedTuples.push(tupleID);
                     auction.assingedTuplesMap[tupleID] = true;
+                    auction.tupleResult[tupleID] = "NOTFOUND";
                     break;
                 }
                 tupleID = auction.serverResult[tempTupleResult[tupleID]];

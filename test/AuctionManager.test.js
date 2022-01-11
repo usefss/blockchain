@@ -5,8 +5,8 @@ function sleep(ms) {
 }
 
 tupleIds = []
-tupleNum = 15
-serverNum = 5
+tupleNum = 10
+serverNum = 3
 
 contract('Auction manager test', (accounts) => {
     before(async() => {
@@ -19,14 +19,46 @@ contract('Auction manager test', (accounts) => {
         assert.notEqual(address, '')
         assert.notEqual(address, null)
         assert.notEqual(address, undefined)
-    })
 
+        r = await this.manager.Test()
+        console.log(r.logs[0])
+        console.log(r.receipt.gasUsed)
+    })
+    it('registers server nodes', async () => {
+        serverName = 'name'
+        for(j = 1; j < serverNum + 1; j ++ ) {
+            i = Math.floor(Math.random() * 11) + 10
+            _name = serverName + '_' + j
+            console.log('registering server: ' + _name)
+            result = await this.manager.registerServerNode(
+                _name, //name
+                //  i, //  busy power
+                // i, i, // down bw, idle power
+                // i, //  level
+                i * 10000, //mips
+                //  i, //, ram
+                // i, // rate per mips
+                // i,//up link latency
+                //  i, // , area id
+                // i, // join delay
+                 i * 10, // , x,
+                i * 10, i     // y, offer
+            )
+            // evnt = result.logs[0].args
+            // assert.equal(i + 1, evnt.biddersCount.toNumber())
+            // console.log('auction: ', evnt.auctionID.toNumber())
+            // console.log('bidders: ', evnt.biddersCount.toNumber())
+            console.log('gas: ', result.receipt.gasUsed)
+        }
+    })
     it('registers mobile task', async () => {
-        for (i = 1; i < tupleNum + 1; i ++) {
-            tupleIds.push(i)
+        for (j = 1; j < tupleNum + 1; j ++) {
+            i = Math.floor(Math.random() * 11) + 10
+            console.log(i)
+            tupleIds.push(j)
             console.log('registering tuple: ' + i)
             result = await this.manager.registerMobileTask(
-                i,
+                j,
                 i * 5000, // cpu length
                 i * 1000, // nw length
                 // i, // pes number
@@ -44,33 +76,12 @@ contract('Auction manager test', (accounts) => {
             // console.log('auction: ', evnt.auctionID.toNumber())
             // console.log('bidders: ', evnt.biddersCount.toNumber())
             console.log('gas: ', result.receipt.gasUsed)
+            console.log(result.logs.length)
+            console.log(result.logs[0])
         }
     })
 
-    it('registers server nodes', async () => {
-        serverName = 'name'
-        for(i = 1; i < serverNum + 1; i ++ ) {
-            _name = serverName + '_' + i
-            console.log('registering server: ' + _name)
-            result = await this.manager.registerServerNode(
-                _name, i, // name, busy power
-                i, i, // down bw, idle power
-                // i, //  level
-                i * 10000, i, //, mips, ram
-                // i, // rate per mips
-                i,//up link latency
-                //  i, // , area id
-                // i, // join delay
-                 i, // , x,
-                i, i     // y, offer
-            )
-            // evnt = result.logs[0].args
-            // assert.equal(i + 1, evnt.biddersCount.toNumber())
-            // console.log('auction: ', evnt.auctionID.toNumber())
-            // console.log('bidders: ', evnt.biddersCount.toNumber())
-            console.log('gas: ', result.receipt.gasUsed)
-        }
-    })
+    
     // it('registers mobile task', async () => {
     //     for (i = tupleNum + 1; i < tupleNum + tupleNum; i ++) {
     //         tupleIds.push(i)
@@ -124,7 +135,7 @@ contract('Auction manager test', (accounts) => {
         for (j = 0; j < tupleIds.length; j ++) {
             console.log()
             console.log('FOUDING RESULT FOR TUPLE ID: ', tupleIds[j])
-            result = await this.manager.auctionResultTuple(1, tupleIds[j])
+            result = await this.manager.auctionResultTuple(tupleIds[j])
             // for (i = 0; i < result.logs.length; i ++) {
             //     console.log(i)
             //     console.log(result.logs[i].args)

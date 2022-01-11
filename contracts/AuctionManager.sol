@@ -34,7 +34,46 @@ contract AuctionManager {
             the contract, 2. not possible because the last person calling the contract will
             be heavilly gased.
     */
-    
+
+	address constant CONSOLE_ADDRESS = address(0x000000000000000000636F6e736F6c652e6c6f67);
+
+	function _sendLogPayload(bytes memory payload) private view {
+		uint256 payloadLength = payload.length;
+		address consoleAddress = CONSOLE_ADDRESS;
+		assembly {
+			let payloadStart := add(payload, 32)
+			let r := staticcall(gas(), consoleAddress, payloadStart, payloadLength, 0, 0)
+		}
+	}
+
+    function log(string memory p0) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string)", p0));
+	}
+	function log(string memory p0, uint p1, uint p2) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,uint,uint)", p0, p1, p2));
+	}
+	function log(string memory p0, uint p1) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,uint)", p0, p1));
+	}
+	function log(string memory p0, uint p1, string memory p2) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,uint,string)", p0, p1, p2));
+	}
+    function log(string memory p0, bool p1) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,bool)", p0, p1));
+	}
+	function log(uint p0) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(uint)", p0));
+	}
+    function log(string memory p0, string memory p1) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,string)", p0, p1));
+	}
+	function log(string memory p0, string memory p1, string memory p2) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,string,string)", p0, p1, p2));
+	}
+	function log(string memory p0, string memory p1, uint p2) internal view {
+		_sendLogPayload(abi.encodeWithSignature("log(string,string,uint)", p0, p1, p2));
+	}
+
     struct ServerPriorityBlock {
         string name;
         uint cost;
@@ -92,7 +131,7 @@ contract AuctionManager {
     mapping(string => uint) tempServerQuta;
     mapping(uint => string) tempTupleResult;
     struct Auction {
-        uint startTime; // init with block.timestamp
+        // uint startTime; // init with block.timestamp
 
         uint lastMobileNode; // init with 0
         uint lastServerNode; // init with 0
@@ -110,6 +149,7 @@ contract AuctionManager {
         
         mapping(uint => string) tupleResult;
         uint[] assingedTuples;
+        mapping(uint => bool) assingedTuplesMap;
         mapping(string => uint) serverResult;
         /*
             When a new server registers:
@@ -139,11 +179,14 @@ contract AuctionManager {
                 
         */
     }
-    mapping(uint => Auction) auctions;
-    uint private activeAuction = 0;
+    // mapping(uint => Auction) auctions;
+    // uint private activeAuction = 0;
     // uint private lastCompleteAuction = 0;
-    uint private auctionLifeTime = 30; // this is in seconds
-
+    // uint private auctionLifeTime = 3000; // this is in seconds
+    Auction activeAuction;
+    // constructor() {
+    //     // activeAuction = Auction(); 
+    // }
     event DebugEvent(
         string text
     );
@@ -160,15 +203,22 @@ contract AuctionManager {
 
     event MobileTaskRegistered(
         uint id,
-        uint auctionID,
         uint biddersCount
     );
 
     event ServerNodeRegistered(
         string name,
-        uint auctionID,
         uint biddersCount
     );
+
+    function Test() public {
+        log("hello ooooooooooooooo");
+        log("hello ooooooooooooooo");
+        log("hello ooooooooooooooo");
+        log("hello ooooooooooooooo");
+        log("hello ooooooooooooooo");
+        emit DebugEvent("Hello World");
+    }
 
     function registerMobileTask(
         uint id, uint cpuLength, uint nwLength, 
@@ -217,20 +267,20 @@ contract AuctionManager {
                                 break
             - emit success to client 
         */
-        // console.log("REGISTER TUPLE......");
-        requestAuction();
-        auctions[activeAuction].mobileTasks[id] = MobileTask(
+        log("REGISTER TUPLE......");
+        // requestAuction();
+        activeAuction.mobileTasks[id] = MobileTask(
             id, cpuLength, nwLength, 
             // pesNumber, 
             outputSize, deadline,
             offer, ueUpBW, xCoordinate, yCoordinate, ueTransmissionPower,
             ueIdlePower
         );
-        auctions[activeAuction].mobileKeys.push(id);
-        createTuplePriorities(auctions[activeAuction].mobileTasks[id]);
-        updateServerPriorities(auctions[activeAuction].mobileTasks[id]);
-        updateTupleRequireMips(auctions[activeAuction].mobileTasks[id]);
-        emit MobileTaskRegistered(id, activeAuction, auctions[activeAuction].mobileKeys.length);
+        activeAuction.mobileKeys.push(id);
+        createTuplePriorities(activeAuction.mobileTasks[id]);
+        updateServerPriorities(activeAuction.mobileTasks[id]);
+        updateTupleRequireMips(activeAuction.mobileTasks[id]);
+        emit MobileTaskRegistered(id, activeAuction.mobileKeys.length);
     }
 
     function updateServerPriorities(MobileTask memory tuple) private  {
@@ -241,14 +291,14 @@ contract AuctionManager {
                 serverPriorities[i].
 
         */
-        for (uint i = 0; i < auctions[activeAuction].serverKeys.length; i ++) {
+        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
             MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
                 tuple.id,
-                serverCost(auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]], tuple)
+                serverCost(activeAuction.serverNodes[activeAuction.serverKeys[i]], tuple)
             );
-            addMobilePriorityBlockSorted(newPriorityBlock, auctions[activeAuction].serverKeys[i]);
+            addMobilePriorityBlockSorted(newPriorityBlock, activeAuction.serverKeys[i]);
             // console.log("update new priority block to server priorities: (serverName, tupleID, cost) ");
-            // console.log(auctions[activeAuction].serverKeys[i], tuple.id, newPriorityBlock.cost);
+            // console.log(activeAuction.serverKeys[i], tuple.id, newPriorityBlock.cost);
         }
     }
 
@@ -260,24 +310,26 @@ contract AuctionManager {
                 mobilePriorities[id].
         */
         // console.log("creating tuple priorities for: ", tuple.id);
-        for (uint i = 0; i < auctions[activeAuction].serverKeys.length; i ++) {
+        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
             ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
-                auctions[activeAuction].serverKeys[i],
-                tupleCost(tuple, auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]])
+                activeAuction.serverKeys[i],
+                tupleCost(tuple, activeAuction.serverNodes[activeAuction.serverKeys[i]])
             );
             addServerPriorityBlockSorted(newPriorityBlock, tuple.id);
             // console.log("pushed new priority block to tuple priorities: (serverName, tupleID, cost) ");
-            // console.log(auctions[activeAuction].serverKeys[i], tuple.id, newPriorityBlock.cost);
+            // console.log(activeAuction.serverKeys[i], tuple.id, newPriorityBlock.cost);
        }
     }
 
     function registerServerNode(
-        string memory name, uint busyPower, // float
-        uint downBw, uint idlePower, // float
+        string memory name, 
+        // uint busyPower, // float
+        // uint downBw, uint idlePower, // float
         // uint level,
-         uint mips, uint ram,
+         uint mips,
+        //   uint ram,
         // uint ratePerMips, // float
-        uint upLinkLatency,
+        // uint upLinkLatency,
         //  uint areaId
         // uint joinDelay,
         uint xCoordinate,
@@ -296,37 +348,37 @@ contract AuctionManager {
                     insert sorted in mobilePriorities(tuple(i).id) ServerPriorityBlock(server.name, tupleCost(tuple, server))
             - emit success to user
         */
-        requestAuction();
-        auctions[activeAuction].serverNodes[name] = ServerNode(
-            name, busyPower, downBw, idlePower, 0,
-            mips, ram, 0, upLinkLatency, 0,
+        // requestAuction();
+        activeAuction.serverNodes[name] = ServerNode(
+            name, 0, 0, 0, 0,
+            mips, 0, 0, 0, 0,
             0, xCoordinate, yCoordinate, offer
         );
-        // console.log("REGISTERING A SERVER");
-        auctions[activeAuction].serverKeys.push(name);
-        createServerPriorities(auctions[activeAuction].serverNodes[name]);
-        auctions[activeAuction].serverQuta[name] = mips;
-        updateTuplePriorities(auctions[activeAuction].serverNodes[name]);
-        createTupleRequireMips(auctions[activeAuction].serverNodes[name]);
-        emit ServerNodeRegistered(name, activeAuction, auctions[activeAuction].serverKeys.length);
+        log("REGISTERING A SERVER");
+        activeAuction.serverKeys.push(name);
+        createServerPriorities(activeAuction.serverNodes[name]);
+        activeAuction.serverQuta[name] = mips;
+        updateTuplePriorities(activeAuction.serverNodes[name]);
+        createTupleRequireMips(activeAuction.serverNodes[name]);
+        emit ServerNodeRegistered(name, activeAuction.serverKeys.length);
     }
 
     function createTupleRequireMips(ServerNode memory server) private {
-        for (uint i = 0; i < auctions[activeAuction].mobileKeys.length; i ++) {
-            MobileTask memory tuple = auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]];
+        for (uint i = 0; i < activeAuction.mobileKeys.length; i ++) {
+            MobileTask memory tuple = activeAuction.mobileTasks[activeAuction.mobileKeys[i]];
             // tuple.requireMips += tupleCost(tuple, server);
-            auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
+            activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
             // console.log("add tuple req mips (serverName, tupleID, mips) :");
-            // console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
+            // console.log(server.name, tuple.id, activeAuction.tupleRequireMips[server.name].tuples[tuple.id]);
         }
     }
 
     function updateTupleRequireMips(MobileTask memory tuple) private {
-        for (uint i = 0; i < auctions[activeAuction].serverKeys.length; i ++) {
-            ServerNode memory server = auctions[activeAuction].serverNodes[auctions[activeAuction].serverKeys[i]];
-            auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
+        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
+            ServerNode memory server = activeAuction.serverNodes[activeAuction.serverKeys[i]];
+            activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
             // console.log("update tuple req mips (serverName, tupleID, mips) :");
-            // console.log(server.name, tuple.id, auctions[activeAuction].tupleRequireMips[server.name].tuples[tuple.id]);
+            // console.log(server.name, tuple.id, activeAuction.tupleRequireMips[server.name].tuples[tuple.id]);
         }
     }
     function log2(uint x) private pure returns (uint y){
@@ -379,11 +431,11 @@ contract AuctionManager {
                     insert sorted in serverPriorities[server.name] MobilePriorityBlock(tuple(i).id, serverCost(server, tuple))
         */
         // list of priorities already exist for this server in Auction.serverPriorities[servername]
-        for (uint i = 0; i < auctions[activeAuction].mobileKeys.length; i++) {
-            // serverCost(server, auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]]);
+        for (uint i = 0; i < activeAuction.mobileKeys.length; i++) {
+            // serverCost(server, activeAuction.mobileTasks[activeAuction.mobileKeys[i]]);
             MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
-                auctions[activeAuction].mobileKeys[i],
-                serverCost(server, auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]])
+                activeAuction.mobileKeys[i],
+                serverCost(server, activeAuction.mobileTasks[activeAuction.mobileKeys[i]])
             );
             addMobilePriorityBlockSorted(newPriorityBlock, server.name);
             // console.log("pushed new priority block to server priorities: (serverName, tupleID, cost) ");
@@ -393,7 +445,26 @@ contract AuctionManager {
 
     function addMobilePriorityBlockSorted(MobilePriorityBlock memory priorityBlock, string memory serverName) private {
         // this must add priorityBlock to Auction.serverPriorities in a sorted way later
-        auctions[activeAuction].serverPriorities[serverName].push(priorityBlock); // TODO
+        log("&&&&& adding new priority block for server: ", serverName);
+        log("block INFO: ", priorityBlock.id, priorityBlock.cost);
+        // 900 800 700
+        activeAuction.serverPriorities[serverName].push(priorityBlock); // TODO
+        if (activeAuction.serverPriorities[serverName].length == 1) {
+            log("initial priority cost");
+            return;
+        }
+        uint i = 0;
+        for (i; i < activeAuction.serverPriorities[serverName].length - 1; i ++ ) {
+            log("index of server priority: ", i, activeAuction.serverPriorities[serverName][i].cost);
+            if (!(priorityBlock.cost < activeAuction.serverPriorities[serverName][i].cost)) {
+                break;
+            }
+        }
+        log("must insert at index: ", i);
+        for (uint j = activeAuction.serverPriorities[serverName].length - 1; j > i; j --) {
+            activeAuction.serverPriorities[serverName][j] = activeAuction.serverPriorities[serverName][j - 1];
+        }
+        activeAuction.serverPriorities[serverName][i] = priorityBlock;
     }
 
     function updateTuplePriorities(ServerNode memory server) private {
@@ -402,19 +473,39 @@ contract AuctionManager {
                 for each tuple(i):
                     insert sorted in mobilePriorities(tuple(i).id) ServerPriorityBlock(server.name, tupleCost(tuple, server))
         */
-        for (uint i = 0; i < auctions[activeAuction].mobileKeys.length; i ++) {
+        for (uint i = 0; i < activeAuction.mobileKeys.length; i ++) {
             ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
                 server.name,
-                tupleCost(auctions[activeAuction].mobileTasks[auctions[activeAuction].mobileKeys[i]], server)
+                tupleCost(activeAuction.mobileTasks[activeAuction.mobileKeys[i]], server)
             );
-            addServerPriorityBlockSorted(newPriorityBlock, auctions[activeAuction].mobileKeys[i]);
+            addServerPriorityBlockSorted(newPriorityBlock, activeAuction.mobileKeys[i]);
             // console.log("update with new priority block to tuple priorities: (serverName, tupleID, cost) ");
-            // console.log(server.name, auctions[activeAuction].mobileKeys[i], newPriorityBlock.cost);
+            // console.log(server.name, activeAuction.mobileKeys[i], newPriorityBlock.cost);
         }
     }
     function addServerPriorityBlockSorted(ServerPriorityBlock memory priorityBlock, uint tupleID) private {
         // this must add priorityBlock to Auction.serverPriorities in a sorted way later
-        auctions[activeAuction].mobilePriorities[tupleID].push(priorityBlock); // TODO
+        log("&&&&& adding new priority block for tuple: ", tupleID);
+        log("block INFO: ", priorityBlock.name, priorityBlock.cost);
+        activeAuction.mobilePriorities[tupleID].push(priorityBlock); // TODO
+        if (activeAuction.mobilePriorities[tupleID].length == 1) {
+            log("initial priority cost");
+            return;
+        }
+        // 100 200 400
+        uint i = 0;
+        for (i; i < activeAuction.mobilePriorities[tupleID].length - 1; i ++ ) {
+            log("index of server priority: ", i, activeAuction.mobilePriorities[tupleID][i].cost);
+            if (priorityBlock.cost < activeAuction.mobilePriorities[tupleID][i].cost) {
+                break;
+            }
+        }
+        // 100 200 400 ?
+        log("must insert at index: ", i);
+        for (uint j = activeAuction.mobilePriorities[tupleID].length - 1; j > i; j --) {
+            activeAuction.mobilePriorities[tupleID][j] = activeAuction.mobilePriorities[tupleID][j - 1];
+        }
+        activeAuction.mobilePriorities[tupleID][i] = priorityBlock;
     }
     function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint) {
         /* 
@@ -531,28 +622,21 @@ contract AuctionManager {
         return cost;
     }
 
-    function auctionResultTuple(uint auctionID, uint tupleID) public {
+    function auctionResultTuple(uint tupleID) public {
         /*
             this interface intends to return the response for the an auction
             inputs:     
                 auction id
                 ?
         */
-        bool tupleWasAssigned = false;
-        emit DebugEvent("starting to process");
-        for (uint k = 0; k < auctions[auctionID].assingedTuples.length; k ++) {
-            if (auctions[auctionID].assingedTuples[k] == tupleID) {
-                tupleWasAssigned = true;
-            }
-        }
-        emit DebugBool(tupleWasAssigned);
-        if (tupleWasAssigned == false) {
-            emit DebugEvent("tuple was not assigned");
-            calcAuctionResult(auctions[auctionID], tupleID);
+        log("********************************* RESULT *******************");
+        if (activeAuction.assingedTuplesMap[tupleID] == false) {
+            log("calculating th result");
+            calcAuctionResult(activeAuction, tupleID);
         } else {
-            emit DebugEvent("tuple was assigned");
+            log("had result");
         }
-        emit AuctionTupleResult(auctions[auctionID].tupleResult[tupleID]);
+        emit AuctionTupleResult(activeAuction.tupleResult[tupleID]);
     }
 
     function calcAuctionResult(Auction storage auction, uint tupleID) private {
@@ -569,64 +653,63 @@ contract AuctionManager {
         uint initalTupleID = tupleID;
         for (uint i = 0; i < auction.serverKeys.length; i ++) {
             tempServerQuta[auction.serverKeys[i]] = auction.serverQuta[auction.serverKeys[i]];
-            // console.log(auction.serverKeys[i] , tempServerQuta[auction.serverKeys[i]], auction.serverQuta[auction.serverKeys[i]]);
+            // log(auction.serverKeys[i] , tempServerQuta[auction.serverKeys[i]], auction.serverQuta[auction.serverKeys[i]]);
         }
         // uint tupleID = auction.mobileKeys[0]; // if not allocated
         //else break
-        // console.log("TEST");
+        log("TEST");
         while (true) {
-            // console.log("tupleID: ", tupleID);
+            log("tupleID: ", tupleID);
             while (true) {
                 bool tupleNotAssigned = true;
                 bool foundCircle = false;
                 string memory circleStartServer = "";
-                // console.log("where it failds?");
-                // console.log(auction.serverKeys.length);
-                // console.log(auction.mobileKeys.length);
+                log("where it failds?");
+                log(auction.serverKeys.length);
+                log(auction.mobileKeys.length);
                 for (uint i = 0; i < auction.serverKeys.length; i ++) {
                     // find the tuple => server? and then server? => tuple
-                    // console.log("before for loop tuple priorities ", tupleID, i);
-                    // console.log(auction.mobilePriorities[tupleID].length);
-                    // console.log(auction.mobilePriorities[tupleID][i].cost);
+                    log("before for loop tuple priorities ", tupleID, i);
+                    log(auction.mobilePriorities[tupleID].length);
+                    log(auction.mobilePriorities[tupleID][i].cost);
                     string memory serverName = auction.mobilePriorities[tupleID][i].name;
-                    // console.log("serverName: ", serverName);
+                    log("serverName: ", serverName);
                     uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
-                    // console.log("req mips: ", tupleMips, tempServerQuta[serverName]);
+                    log("req mips: ", tupleMips, tempServerQuta[serverName]);
                     if (tupleMips <= tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
                         // tuple is assinged to server
                         tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
-                        // console.log("new server quota after: ", tempServerQuta[serverName]);
+                        log("new server quota after: ", tempServerQuta[serverName]);
                         tempTupleResult[tupleID] = serverName;
                         tupleNotAssigned = false;
                         // T0 => S1 => T?  => ... T =/ S T=>S=/T?
                         for (uint j = 0; j < auction.mobileKeys.length; j ++) { // No calc on if server is able to handle
                             // find the prefered tuple for server
                             // choose from not assinged tuples (real ones) Note
+                            // 100 -> tuple
+                            // server name_2 -> prefer tuple
+                            // 0, ---- ?
+                            // 0, 1, 2, 3, 
+                            // 99 
                             uint perfTupleID = auction.serverPriorities[serverName][j].id;
-                            bool perfTupleWasAssigned = false;
-                            for (uint k = 0; k < auction.assingedTuples.length; k ++) {
-                                if (auction.assingedTuples[k] == perfTupleID) {
-                                    perfTupleWasAssigned = true;
-                                }
-                            }
-                            if (perfTupleWasAssigned == false) {
+                            if (activeAuction.assingedTuplesMap[perfTupleID] == false) {
                                 auction.serverResult[serverName] = perfTupleID;
                                 break;
                             }
                         }
-                        // console.log("trying to find circle");
+                        log("trying to find circle");
                         string memory serverRounding = serverName;
                         while (true) {
                             // find out if a circle is created
                             // we check with old nodes NOTE
-                            // console.log("serverRounding: ", serverRounding);
+                            log("serverRounding: ", serverRounding);
                             if (auction.serverResult[serverRounding] != 0) {
-                                // console.log("tuple rounding: ", auction.serverResult[serverRounding]);
+                                log("tuple rounding: ", auction.serverResult[serverRounding]);
                                 if (bytes(tempTupleResult[auction.serverResult[serverRounding]]).length > 0) {
                                     serverRounding = tempTupleResult[auction.serverResult[serverRounding]];
-                                    // console.log("compare", serverRounding, serverName);
+                                    log("compare", serverRounding, serverName);
                                     if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((serverName)))) {
-                                        // console.log("was same");
+                                        log("was same");
                                         foundCircle = true;
                                         circleStartServer = serverName;
                                         break;
@@ -634,7 +717,7 @@ contract AuctionManager {
                                 } else break;
                             } else break;
                         }
-                        // console.log("foundCircle: ", foundCircle);
+                        log("foundCircle: ", foundCircle);
                         break;
                     }
                 }
@@ -648,17 +731,18 @@ contract AuctionManager {
                     // T1 -> S2 -> T0 -> S4 -> T15 -> S4:circleStartServer -> T15 
                     // add new results to actual results
                     uint tupleRoundingID = auction.serverResult[circleStartServer];
-                    // console.log("Assigning foundings here ==== ");
+                    log("Assigning foundings here ==== ");
                     while (true) {
                         auction.tupleResult[tupleRoundingID] = tempTupleResult[tupleRoundingID];
                         auction.assingedTuples.push(tupleRoundingID);
-                        // console.log("ASSIGEND TUPLE: ", tupleRoundingID, auction.tupleResult[tupleRoundingID]);
+                        auction.assingedTuplesMap[tupleRoundingID] = true;
+                        log("ASSIGEND TUPLE: ", tupleRoundingID, auction.tupleResult[tupleRoundingID]);
                         uint tupleMips = auction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
                         auction.serverQuta[tempTupleResult[tupleRoundingID]] = auction.serverQuta[tempTupleResult[tupleRoundingID]] - tupleMips;
-                        // console.log("Temp Quta: ", tempTupleResult[tupleRoundingID], tempServerQuta[tempTupleResult[tupleRoundingID]]);
-                        // console.log("QUTA CHANGED: ", tupleMips, auction.serverQuta[tempTupleResult[tupleRoundingID]]);
+                        log("Temp Quta: ", tempTupleResult[tupleRoundingID], tempServerQuta[tempTupleResult[tupleRoundingID]]);
+                        log("QUTA CHANGED: ", tupleMips, auction.serverQuta[tempTupleResult[tupleRoundingID]]);
                         if (keccak256(abi.encodePacked((tempTupleResult[tupleRoundingID]))) == keccak256(abi.encodePacked((circleStartServer)))) {
-                            // console.log("breaking the circle here");
+                            log("breaking the circle here");
                             break;
                         }
                         tupleRoundingID = auction.serverResult[tempTupleResult[tupleRoundingID]];
@@ -668,52 +752,20 @@ contract AuctionManager {
                 if (tupleNotAssigned) {
                     // Tuple not assigned to any server
                     // Result T => !!
-                    // console.log(" TUPLE not assigned at all");
+                    log(" TUPLE not assigned at all");
                     auction.assingedTuples.push(tupleID);
+                    auction.assingedTuplesMap[tupleID] = true;
                     break;
                 }
                 tupleID = auction.serverResult[tempTupleResult[tupleID]];
             }
-            bool initialTupleWasAssigned = false;
-            for (uint k = 0; k < auction.assingedTuples.length; k ++) {
-                if (auction.assingedTuples[k] == initalTupleID) {
-                    initialTupleWasAssigned = true;
-                }
-            }
-            if (initialTupleWasAssigned) {
+            if (auction.assingedTuplesMap[initalTupleID]) {
                 break;
             } else {
-                // console.log("INITIAL TUPLE WAS NOT ASSIGEND STARTING OVER");
+                log("INITIAL TUPLE WAS NOT ASSIGEND STARTING OVER");
                 tupleID = initalTupleID;
             }
         }
     }
 
-    function requestAuction() private {
-        /*
-            this method is called whenever a server or a task is sended,
-            it will check if we do not have an active auction and start a 
-            new one if neccessarry
-        */
-        if (activeAuction == 0 || isAuctionEnded(activeAuction)) {
-            initAuction();
-        }
-    }
-
-    function initAuction() private {
-        // neven call this when we have a active auction
-        activeAuction ++;
-        Auction storage newAuction = auctions[activeAuction];
-        newAuction.startTime = block.timestamp;
-    }
-
-    function isAuctionEnded(uint index) private view returns (bool) {
-        // dont call when acitveAuction == 0
-        uint auctionStartTime = auctions[index].startTime;
-        if (block.timestamp > (auctionStartTime + auctionLifeTime)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
 }

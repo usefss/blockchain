@@ -5,7 +5,7 @@ function sleep(ms) {
 }
 
 tupleIds = []
-tupleNum = 3
+tupleNum = 30
 serverNum = 3
 
 contract('Auction manager test', (accounts) => {

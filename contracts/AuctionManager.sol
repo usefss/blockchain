@@ -134,8 +134,11 @@ contract AuctionManager {
     string[] tempVisitedServers;
     uint[] tempVisitedTuples;
 
+    uint randSeed = 1;
+
     struct Auction {
         // uint startTime; // init with block.timestamp
+
 
         uint lastMobileNode; // init with 0
         uint lastServerNode; // init with 0
@@ -153,6 +156,7 @@ contract AuctionManager {
         
         mapping(uint => string) tupleResult;
         uint[] assingedTuples;
+        uint[] unassignedTuples;
         mapping(uint => bool) assingedTuplesMap;
         mapping(string => uint) serverResult;
         /*
@@ -601,13 +605,14 @@ contract AuctionManager {
         log("TEST");
         while (true) {
             log("tupleID: ", tupleID);
-            delete tempVisitedTuples;
-            tempVisitedTuples.push(tupleID);
+            // delete tempVisitedTuples;
+            // tempVisitedTuples.push(tupleID);
             while (true) {
                 bool tupleNotAssigned = true;
                 bool foundCircle = false;
                 string memory circleStartServer = "";
-                log("where it failds?");
+                // uint circleStartTuple = 0; // we never have tuple with id of 0
+                log("where it fails?");
                 log(auction.serverKeys.length);
                 log(auction.mobileKeys.length);
                 for (uint i = 0; i < auction.serverKeys.length; i ++) {
@@ -619,6 +624,7 @@ contract AuctionManager {
                     log("serverName: ", serverName);
                     uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
                     log("req mips: ", tupleMips, tempServerQuta[serverName]);
+                    log("bids: ", auction.serverNodes[serverName].offer, auction.mobileTasks[tupleID].offer);
                     if (tupleMips <= tempServerQuta[serverName] && 
                         auction.serverNodes[serverName].offer <= auction.mobileTasks[tupleID].offer) { // servers does not exit the process at all!!! NOTE
                         // tuple is assinged to server
@@ -646,19 +652,36 @@ contract AuctionManager {
                         string memory serverRounding = serverName;
                         // string[] memory visitedServers;
                         // uint visitedLength = 0;
-                        log("hhheeere");
                         delete tempVisitedServers;
                         tempVisitedServers.push(serverRounding);
+                        delete tempVisitedTuples;
                         while (true) {
                             // find out if a circle is created
                             // we check with old nodes NOTE
-                            // S0:serverName -> T0 -> S1 -> T1 -> S2:R -> T2 -> S0
+                            // S0:serverName -> T0:R -> S1 -> T1 -> S2:R -> T2 -> S0
                             // S0:serverName -> T0 -> S1 -> T1 -> S1:R
-                            // S0:serverName -> T0 -> S1 -> T1 -> S2:R -> T1 NEMISHE
+                            // S0:serverName -> T0 -> S1 -> T1 -> S2:R -> T1
+                            // 1. T. -> S0 -> T0 -> S1 -> T1 -> S2 -> T2 -> S1
+                            //    T. -> S0 -> T0
+                            // 2. T. -> S0 -> T0 -> S1 -> T1 -> S2 -> T2 -> S3 -> T1
+                            //    T. -> S0 -> T0 // -> S1  //
                             // mapping (string => bool) calldata visitedServers;
                             log("serverRounding: ", serverRounding);
                             if (auction.serverResult[serverRounding] != 0) {
                                 log("tuple rounding: ", auction.serverResult[serverRounding]);
+                                uint TupleRounding = auction.serverResult[serverRounding];
+                                // bool isRepeat = false;
+                                for (uint ind1 = 0; ind1 < tempVisitedTuples.length; ind1 ++) {
+                                    if (TupleRounding == tempVisitedTuples[ind1]) {
+                                        log("found circle with tuple: ", TupleRounding);
+                                        foundCircle = true;
+                                        // circleStartTuple = TupleRounding;
+                                        circleStartServer = serverRounding;
+                                        break;
+                                    }
+                                }
+                                tempVisitedTuples.push(TupleRounding);
+
                                 if (bytes(tempTupleResult[auction.serverResult[serverRounding]]).length > 0) {
                                     serverRounding = tempTupleResult[auction.serverResult[serverRounding]];
                                     for (uint ind1 = 0; ind1 < tempVisitedServers.length; ind1 ++) {
@@ -688,6 +711,9 @@ contract AuctionManager {
                     // T20 21... 
                     // T1 -> S2 -> T0 -> S4 -> T15 -> S4:circleStartServer -> T15 
                     // add new results to actual results
+
+                    // One. S1:start -> T1 -> S2 -> T2 -> S1
+                    // Two. T1 -> S2:start -> T2 -> S3 -> T1
                     uint tupleRoundingID = auction.serverResult[circleStartServer];
                     log("Assigning foundings here ==== ");
                     while (true) {
@@ -716,16 +742,7 @@ contract AuctionManager {
                     auction.tupleResult[tupleID] = "NOTFOUND";
                     break;
                 }
-                bool isRepeat = false;
                 tupleID = auction.serverResult[tempTupleResult[tupleID]];
-                for (uint ind1 = 0; ind1 < tempVisitedTuples.length; ind1 ++) {
-                    if (tupleID == tempVisitedTuples[ind1]) {
-                        isRepeat = true;
-                        break;
-                    }
-                }
-                if (isRepeat) break; // ???
-                tempVisitedTuples.push(tupleID);
                 // T0 -> S0 -> T1 -> S1 -> T2 -> S2 -> T1
             }
             if (auction.assingedTuplesMap[initalTupleID]) {
@@ -733,6 +750,17 @@ contract AuctionManager {
             } else {
                 log("INITIAL TUPLE WAS NOT ASSIGEND STARTING OVER");
                 tupleID = initalTupleID;
+                // delete auction.unassignedTuples;
+                // for (uint ind1 = 0; ind1 < auction.mobileKeys.length; ind1 ++) {
+                //     if (!auction.assingedTuplesMap[auction.mobileKeys[ind1]]) {
+                //         log("^^^^^^^^^^^^^^^^^^ adding not assinged: ", auction.mobileKeys[ind1]);
+                //         auction.unassignedTuples.push(auction.mobileKeys[ind1]);
+                //     }
+                // }
+                // tupleID = auction.unassignedTuples[(block.timestamp * randSeed + randSeed) % auction.unassignedTuples.length];
+                // log((block.timestamp * randSeed + randSeed) % auction.unassignedTuples.length);
+                // log(tupleID);
+                // randSeed += 1;
             }
         }
     }

@@ -5,7 +5,7 @@ function sleep(ms) {
 }
 
 tupleIds = []
-tupleNum = 30
+tupleNum = 3
 serverNum = 3
 
 contract('Auction manager test', (accounts) => {
@@ -21,6 +21,7 @@ contract('Auction manager test', (accounts) => {
         assert.notEqual(address, undefined)
 
         r = await this.manager.Test()
+        console.log('block:::: ', r.receipt.blockNumber)
         console.log(r.logs[0])
         console.log(r.receipt.gasUsed)
     })
@@ -49,6 +50,7 @@ contract('Auction manager test', (accounts) => {
             // console.log('auction: ', evnt.auctionID.toNumber())
             // console.log('bidders: ', evnt.biddersCount.toNumber())
             console.log('gas: ', result.receipt.gasUsed)
+            console.log('block:::: ', r.receipt.blockNumber)
         }
     })
     it('registers mobile task', async () => {
@@ -76,6 +78,7 @@ contract('Auction manager test', (accounts) => {
             // console.log('auction: ', evnt.auctionID.toNumber())
             // console.log('bidders: ', evnt.biddersCount.toNumber())
             console.log('gas: ', result.receipt.gasUsed)
+            console.log('block:::: ', r.receipt.blockNumber)
             // console.log(result.logs.length)
             // console.log(result.logs[0])
         }
@@ -141,6 +144,7 @@ contract('Auction manager test', (accounts) => {
             //     console.log(result.logs[i].args)
             // }
             console.log('gas: ', result.receipt.gasUsed)
+            console.log('block:::: ', r.receipt.blockNumber)
         }
 
     })

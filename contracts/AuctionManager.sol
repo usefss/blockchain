@@ -130,6 +130,10 @@ contract AuctionManager {
     }
     mapping(string => uint) tempServerQuta;
     mapping(uint => string) tempTupleResult;
+
+    string[] tempVisitedServers;
+    uint[] tempVisitedTuples;
+
     struct Auction {
         // uint startTime; // init with block.timestamp
 
@@ -268,6 +272,7 @@ contract AuctionManager {
             - emit success to client 
         */
         log("REGISTER TUPLE......");
+        log(block.number);
         // requestAuction();
         activeAuction.mobileTasks[id] = MobileTask(
             id, cpuLength, nwLength, 
@@ -355,6 +360,7 @@ contract AuctionManager {
             0, xCoordinate, yCoordinate, offer
         );
         log("REGISTERING A SERVER");
+        log(block.number);
         activeAuction.serverKeys.push(name);
         createServerPriorities(activeAuction.serverNodes[name]);
         activeAuction.serverQuta[name] = mips;
@@ -447,7 +453,8 @@ contract AuctionManager {
         // this must add priorityBlock to Auction.serverPriorities in a sorted way later
         log("&&&&& adding new priority block for server: ", serverName);
         log("block INFO: ", priorityBlock.id, priorityBlock.cost);
-        // 900 800 700
+        // 900 800 700 200
+        // 200
         activeAuction.serverPriorities[serverName].push(priorityBlock); // TODO
         if (activeAuction.serverPriorities[serverName].length == 1) {
             log("initial priority cost");
@@ -512,85 +519,17 @@ contract AuctionManager {
             this value shows that how much a tuple likes to get picked by a server
             this is used in mobilePriorities
         */
-        // console.log("********* tuple mips &&&&&&&&&&&&&&&&&&");
-        // console.log(server.xCoordinate, server.yCoordinate);
-        // console.log(tuple.xCoordinate, tuple.yCoordinate);
-        // console.log(tuple.nwLength);
-        // console.log(tuple.ueUpBW);
-        // console.log(tuple.ueTransmissionPower);
-        // console.log(tuple.cpuLength, server.mips);
-        // console.log("***********************");
-        // ((tuple.x - server.x) ** 2 + (tuple.y - server.y) ** 2) ** 0.5
-        // bytes16 distX = ABDKMathQuad.fromInt(int256(tuple.xCoordinate) - int256(server.xCoordinate));
-        // bytes16 distY =  ABDKMathQuad.fromInt(int256(tuple.yCoordinate) - int256(server.yCoordinate));
-        // bytes16 distplus = ABDKMathQuad.add(
-        //     ABDKMathQuad.mul(distX, distX), 
-        //     ABDKMathQuad.mul(distY, distY)
-        // );
-        // bytes16 distplus2 = ABDKMathQuad.mul(distplus, distplus);
-        // bytes16 distplus6 = ABDKMathQuad.mul(
-        //     ABDKMathQuad.mul(
-        //        distplus2, distplus2 
-        //     ), 
-        //     distplus2
-        // );
-        // distplus6 = ABDKMathQuad.fromInt(ABDKMathQuad.toInt(distplus6));
         int distplus6 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
                                 + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
-        // // bytes16 distplus6 = ABDKMathQuad.fromInt(531441000000);
-        // bytes16 loggvalue = ABDKMathQuad.log_2(ABDKMathQuad.add(
-        //     ABDKMathQuad.fromInt(2),
-        //     ABDKMathQuad.div(
-        //         ABDKMathQuad.mul(
-        //             ABDKMathQuad.fromInt(int256(tuple.ueTransmissionPower)),
-        //             ABDKMathQuad.fromInt(500000000000)
-        //         ),
-        //         distplus6
-        //     )
-        // ));
-        // uint256 logvint = uint256(ABDKMathQuad.toInt(loggvalue));
         uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
         // console.log(logvint);
         uint t_ij_transmit = (1000000 * tuple.nwLength) / (logvint * tuple.ueUpBW);
-        // console.log(t_ij_transmit);
-        // int256 t_ij_transmit = int256((1000*tuple.nwLength) / (logvint * tuple.ueUpBW));
-        // int256 t_ij_transmit = ABDKMathQuad.toInt(ABDKMathQuad.div(
-        //     ABDKMathQuad.fromInt(int256(tuple.nwLength * 1000)),
-        //     ABDKMathQuad.mul(
-        //         ABDKMathQuad.fromInt(int256(tuple.ueUpBW)), loggvalue
-        //     )
-        // ));
-        // int256 t_ij_process = ABDKMathQuad.toInt(ABDKMathQuad.div(
-        //     ABDKMathQuad.fromInt(int256(tuple.cpuLength * 1000)),
-        //     ABDKMathQuad.fromInt(int256(server.mips))
-        // ));
         uint t_ij_process = (1000000 * tuple.cpuLength) / server.mips;
-        // console.log(t_ij_process);
-        // bytes16 t_ij_offload = ABDKMathQuad.add(
-        //     t_ij_transmit,
-        //     t_ij_process
-        // );
         uint t_ij_offload_norm = (t_ij_transmit + t_ij_process) / tuple.deadline;
         // console.log("offlloaddd : ", t_ij_offload_norm);
-        uint e_ij_offload_norm = (t_ij_transmit * tuple.ueTransmissionPower * 100 
+        uint e_ij_offload_norm = (t_ij_transmit * tuple.ueTransmissionPower * 1000 
                             + t_ij_process * tuple.ueIdlePower) / 
-                                        (tuple.deadline * (tuple.ueTransmissionPower * 100 + tuple.ueIdlePower));
-        // console.log("energy offload: ", e_ij_offload_norm);
-        // bytes16 ml = ABDKMathQuad.mul(
-        //     t_ij_offload_norm, ABDKMathQuad.fromInt(1000)
-        // );
-        // int256 d = ABDKMathQuad.toInt(t_ij_offload_norm);
-        //     ABDKMathQuad.mul(
-        //         t_ij_offload_norm, ABDKMathQuad.fromInt(1000)
-        //     )
-        // )));
-        // t_ij_transmit ==> input * 1000/(upload* 100 * log(1+((power*noisem1:A)/(distanceplus6:B))) ** 10)
-        // n * log(x) ==> log x ** n??? 4 * log 2 ==> log 2 ** 4
-        // 1 + a/b ==> (b+a)/b
-        // log a/b ==> log a - log b
-        // => log (A+B) - log B
-        // t_ij_transmit ==> input / (upload * (log(power*noisem1 + distplus6) - log(distplus6)))
-        // uint b = log2(34012224000000000002000000000000);
+                                        (tuple.deadline * (tuple.ueTransmissionPower * 1000 + tuple.ueIdlePower));
         uint pref = t_ij_offload_norm + e_ij_offload_norm + server.offer * 1000; // (server.offer/1000) * 1000000
         // console.log("server, tuple ID: ", server.name, tuple.id);
         // console.log("TUPLE PREFRENCE ON SERVER: ", pref);
@@ -616,6 +555,7 @@ contract AuctionManager {
         int dist = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
                         + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2);
         uint cost =  uint128(1000000 + tuple.offer * 1000 - 2357 * sqrt(uint(dist)));
+        // max distance from 0,0 to 300,300 => max dist = 2357 
         // 900 800 700 ...
         // console.log("***** SERVER COST ******");
         // console.log("SERver PREF: ", cost);
@@ -630,6 +570,7 @@ contract AuctionManager {
                 ?
         */
         log("********************************* RESULT *******************");
+        log(block.number);
         if (activeAuction.assingedTuplesMap[tupleID] == false) {
             log("calculating th result");
             calcAuctionResult(activeAuction, tupleID);
@@ -660,6 +601,8 @@ contract AuctionManager {
         log("TEST");
         while (true) {
             log("tupleID: ", tupleID);
+            delete tempVisitedTuples;
+            tempVisitedTuples.push(tupleID);
             while (true) {
                 bool tupleNotAssigned = true;
                 bool foundCircle = false;
@@ -676,8 +619,10 @@ contract AuctionManager {
                     log("serverName: ", serverName);
                     uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
                     log("req mips: ", tupleMips, tempServerQuta[serverName]);
-                    if (tupleMips <= tempServerQuta[serverName]) { // servers does not exit the process at all!!! NOTE
+                    if (tupleMips <= tempServerQuta[serverName] && 
+                        auction.serverNodes[serverName].offer <= auction.mobileTasks[tupleID].offer) { // servers does not exit the process at all!!! NOTE
                         // tuple is assinged to server
+                        // 4000 4000 2000 ..... 16 .... 17
                         tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
                         log("new server quota after: ", tempServerQuta[serverName]);
                         tempTupleResult[tupleID] = serverName;
@@ -699,21 +644,34 @@ contract AuctionManager {
                         }
                         log("trying to find circle");
                         string memory serverRounding = serverName;
+                        // string[] memory visitedServers;
+                        // uint visitedLength = 0;
+                        log("hhheeere");
+                        delete tempVisitedServers;
+                        tempVisitedServers.push(serverRounding);
                         while (true) {
                             // find out if a circle is created
                             // we check with old nodes NOTE
+                            // S0:serverName -> T0 -> S1 -> T1 -> S2:R -> T2 -> S0
+                            // S0:serverName -> T0 -> S1 -> T1 -> S1:R
+                            // S0:serverName -> T0 -> S1 -> T1 -> S2:R -> T1 NEMISHE
+                            // mapping (string => bool) calldata visitedServers;
                             log("serverRounding: ", serverRounding);
                             if (auction.serverResult[serverRounding] != 0) {
                                 log("tuple rounding: ", auction.serverResult[serverRounding]);
                                 if (bytes(tempTupleResult[auction.serverResult[serverRounding]]).length > 0) {
                                     serverRounding = tempTupleResult[auction.serverResult[serverRounding]];
-                                    log("compare", serverRounding, serverName);
-                                    if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((serverName)))) {
-                                        log("was same");
-                                        foundCircle = true;
-                                        circleStartServer = serverName;
-                                        break;
+                                    for (uint ind1 = 0; ind1 < tempVisitedServers.length; ind1 ++) {
+                                        log("compare&&&: ", serverRounding, tempVisitedServers[ind1]);
+                                        if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((tempVisitedServers[ind1])))) {
+                                            log("was same");
+                                            foundCircle = true;
+                                            circleStartServer = serverRounding;
+                                            break;
+                                        }
                                     }
+                                    if (foundCircle) break;
+                                    tempVisitedServers.push(serverRounding);
                                 } else break;
                             } else break;
                         }
@@ -758,7 +716,17 @@ contract AuctionManager {
                     auction.tupleResult[tupleID] = "NOTFOUND";
                     break;
                 }
+                bool isRepeat = false;
                 tupleID = auction.serverResult[tempTupleResult[tupleID]];
+                for (uint ind1 = 0; ind1 < tempVisitedTuples.length; ind1 ++) {
+                    if (tupleID == tempVisitedTuples[ind1]) {
+                        isRepeat = true;
+                        break;
+                    }
+                }
+                if (isRepeat) break; // ???
+                tempVisitedTuples.push(tupleID);
+                // T0 -> S0 -> T1 -> S1 -> T2 -> S2 -> T1
             }
             if (auction.assingedTuplesMap[initalTupleID]) {
                 break;

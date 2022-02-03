@@ -136,6 +136,8 @@ contract AuctionManager {
 
     uint randSeed = 1;
 
+    bool simpleContract = true;
+
     struct Auction {
         // uint startTime; // init with block.timestamp
 
@@ -287,7 +289,9 @@ contract AuctionManager {
         );
         activeAuction.mobileKeys.push(id);
         createTuplePriorities(activeAuction.mobileTasks[id]);
-        updateServerPriorities(activeAuction.mobileTasks[id]);
+        if (!simpleContract) {
+            updateServerPriorities(activeAuction.mobileTasks[id]);
+        }
         updateTupleRequireMips(activeAuction.mobileTasks[id]);
         emit MobileTaskRegistered(id, activeAuction.mobileKeys.length);
     }
@@ -366,7 +370,9 @@ contract AuctionManager {
         log("REGISTERING A SERVER");
         log(block.number);
         activeAuction.serverKeys.push(name);
-        createServerPriorities(activeAuction.serverNodes[name]);
+        if (!simpleContract) {
+            createServerPriorities(activeAuction.serverNodes[name]);
+        }
         activeAuction.serverQuta[name] = mips;
         updateTuplePriorities(activeAuction.serverNodes[name]);
         createTupleRequireMips(activeAuction.serverNodes[name]);
@@ -467,6 +473,7 @@ contract AuctionManager {
         uint i = 0;
         for (i; i < activeAuction.serverPriorities[serverName].length - 1; i ++ ) {
             log("index of server priority: ", i, activeAuction.serverPriorities[serverName][i].cost);
+            log("     for: ", serverName);
             if (!(priorityBlock.cost < activeAuction.serverPriorities[serverName][i].cost)) {
                 break;
             }
@@ -518,7 +525,7 @@ contract AuctionManager {
         }
         activeAuction.mobilePriorities[tupleID][i] = priorityBlock;
     }
-    function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint) {
+    function tupleCost(MobileTask memory tuple, ServerNode memory server) private view returns (uint) {
         /* 
             this value shows that how much a tuple likes to get picked by a server
             this is used in mobilePriorities
@@ -535,6 +542,10 @@ contract AuctionManager {
                             + t_ij_process * tuple.ueIdlePower) / 
                                         (tuple.deadline * (tuple.ueTransmissionPower * 1000 + tuple.ueIdlePower));
         uint pref = t_ij_offload_norm + e_ij_offload_norm + server.offer * 1000; // (server.offer/1000) * 1000000
+        log("************** tupleCost: server, tuple: ", tuple.id, server.name);
+        log("tij norm: ", t_ij_offload_norm);
+        log("eij norm: ", e_ij_offload_norm);
+        log("server Offer: ", server.offer * 1000);
         // console.log("server, tuple ID: ", server.name, tuple.id);
         // console.log("TUPLE PREFRENCE ON SERVER: ", pref);
         // sort 100 200 300 ...
@@ -577,11 +588,52 @@ contract AuctionManager {
         log(block.number);
         if (activeAuction.assingedTuplesMap[tupleID] == false) {
             log("calculating th result");
-            calcAuctionResult(activeAuction, tupleID);
+            if (simpleContract) {
+                calcAuctionResultSimple(activeAuction, tupleID);
+            } else {
+                calcAuctionResult(activeAuction, tupleID);
+            }
         } else {
             log("had result");
         }
         emit AuctionTupleResult(activeAuction.tupleResult[tupleID]);
+    }
+
+    function calcAuctionResultSimple(Auction storage auction, uint tupleID) private {
+        /*
+            tupleID =>
+                iterate list pr => 
+                    if has mips => assign
+        */
+        bool tupleNotAssigned = true;
+        for (uint i = 0; i < auction.serverKeys.length; i ++) {
+            // find the tuple => server? and then server? => tuple
+            string memory serverName = auction.mobilePriorities[tupleID][i].name;
+            uint tupleMips = auction.tupleRequireMips[serverName].tuples[tupleID];
+            log("tuple Req mips: ", tupleMips, auction.serverQuta[serverName]);
+            log("bids: server, tuple: ", auction.serverNodes[serverName].offer, auction.mobileTasks[tupleID].offer);
+            if (tupleMips <= auction.serverQuta[serverName] && 
+                auction.serverNodes[serverName].offer <= auction.mobileTasks[tupleID].offer) { // servers does not exit the process at all!!! NOTE
+                // tuple is assinged to server
+                // 4000 4000 2000 ..... 16 .... 17
+                
+                auction.serverQuta[serverName] = auction.serverQuta[serverName] - tupleMips;
+                auction.tupleResult[tupleID] = serverName;
+                auction.assingedTuples.push(tupleID);
+                auction.assingedTuplesMap[tupleID] = true;
+                log("ASSIGEND TUPLE: ", tupleID, serverName);
+                tupleNotAssigned = false;
+                break;
+            }
+        }
+        if (tupleNotAssigned) {
+            // Tuple not assigned to any server
+            // Result T => !!
+            log(" TUPLE not assigned at all");
+            auction.assingedTuples.push(tupleID);
+            auction.assingedTuplesMap[tupleID] = true;
+            auction.tupleResult[tupleID] = "NOTFOUND";
+        }
     }
 
     function calcAuctionResult(Auction storage auction, uint tupleID) private {

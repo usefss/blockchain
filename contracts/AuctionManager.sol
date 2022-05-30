@@ -16,16 +16,7 @@ contract AuctionManager {
     struct ServerNode {
         string name;
 
-        // uint busyPower; // float
-        // uint downBw;
-        // uint idlePower; // float
-        // uint level;
         uint mips;
-        // uint ram;
-        // uint ratePerMips; // float
-        // uint upLinkLatency;
-        // uint areaId;
-        // uint joinDelay;
         
         uint xCoordinate;
         uint yCoordinate;
@@ -38,7 +29,6 @@ contract AuctionManager {
 
         uint cpuLength;
         uint nwLength;
-        // uint pesNumber;
         uint outputSize;
 
         uint deadline;
@@ -83,18 +73,18 @@ contract AuctionManager {
       
     }
     Auction activeAuction;
-    event AuctionTupleResult (
-        string serverName
-    );
-    event MobileTaskRegistered(
-        uint id,
-        uint biddersCount
-    );
+    // event AuctionTupleResult (
+    //     string serverName
+    // );
+    // event MobileTaskRegistered(
+    //     uint id,
+    //     uint biddersCount
+    // );
 
-    event ServerNodeRegistered(
-        string name,
-        uint biddersCount
-    );
+    // event ServerNodeRegistered(
+    //     string name,
+    //     uint biddersCount
+    // );
 
     function registerMobileTask(
         uint id, uint cpuLength, uint nwLength, 
@@ -141,36 +131,25 @@ contract AuctionManager {
 
     function registerServerNode(
         string memory name, 
-        // uint busyPower, // float
-        // uint downBw, uint idlePower, // float
-        // uint level,
          uint mips,
-        //   uint ram,
-        // uint ratePerMips, // float
-        // uint upLinkLatency,
-        //  uint areaId
-        // uint joinDelay,
         uint xCoordinate,
         uint yCoordinate , uint offer
     ) public {
 
         activeAuction.serverNodes[name] = ServerNode(
-            name,
-            //  0, 0, 0, 0,
-            mips,
-            //  0, 0, 0, 0,
-            // 0,
-             xCoordinate, yCoordinate, offer
+            name, mips,
+            xCoordinate, yCoordinate, offer
         );
         activeAuction.serverKeys.push(name);
         // createServerPriorities(activeAuction.serverNodes[name]);
         activeAuction.serverQuta[name] = mips;
         // updateTuplePriorities(activeAuction.serverNodes[name]);
         // createTupleRequireMips(activeAuction.serverNodes[name]);
-        emit ServerNodeRegistered(name, activeAuction.serverKeys.length);
+        // emit ServerNodeRegistered(name, activeAuction.serverKeys.length);
     }
 
-    function createTupleRequireMips(ServerNode memory server) private {
+    function createTupleRequireMips(string memory serverName) public {
+        ServerNode memory server = activeAuction.serverNodes[serverName];
         for (uint i = 0; i < activeAuction.mobileKeys.length; i ++) {
             MobileTask memory tuple = activeAuction.mobileTasks[activeAuction.mobileKeys[i]];
             activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
@@ -223,7 +202,8 @@ contract AuctionManager {
         return mps;
     }
 
-    function createServerPriorities(ServerNode memory server) private {
+    function createServerPriorities(string memory serverName) public {
+        ServerNode memory server = activeAuction.serverNodes[serverName];
         for (uint i = 0; i < activeAuction.mobileKeys.length; i++) {
             uint tupleID = activeAuction.mobileKeys[i];
             MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
@@ -252,7 +232,8 @@ contract AuctionManager {
         activeAuction.serverPriorities[serverName][i] = priorityBlock;
     }
 
-    function updateTuplePriorities(ServerNode memory server) private {
+    function updateTuplePriorities(string memory serverName) public {
+        ServerNode memory server = activeAuction.serverNodes[serverName];
         for (uint i = 0; i < activeAuction.mobileKeys.length; i ++) {
             uint tupleId = activeAuction.mobileKeys[i];
             ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
@@ -315,7 +296,7 @@ contract AuctionManager {
             calcAuctionResult(tupleID);
         } else {
         }
-        emit AuctionTupleResult(activeAuction.tupleResult[tupleID]);
+        // emit AuctionTupleResult(activeAuction.tupleResult[tupleID]);
     }
 
     function calcAuctionResult(uint tupleID) private {

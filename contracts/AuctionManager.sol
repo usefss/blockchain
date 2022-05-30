@@ -115,7 +115,7 @@ contract AuctionManager {
         emit MobileTaskRegistered(id, activeAuction.mobileKeys.length);
     }
 
-    function updateServerPriorities(uint id) private  {
+    function updateServerPriorities(uint id) public  {
         MobileTask memory tuple = activeAuction.mobileTasks[id];
         for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
             MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
@@ -172,7 +172,7 @@ contract AuctionManager {
         }
     }
 
-    function updateTupleRequireMips(uint id) private {
+    function updateTupleRequireMips(uint id) public {
         MobileTask memory tuple = activeAuction.mobileTasks[id];
         for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
             ServerNode memory server = activeAuction.serverNodes[activeAuction.serverKeys[i]];

@@ -4,9 +4,12 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-tupleIds = []
-tupleNum = 30
-serverNum = 3
+// tupleIds = []
+// tupleNum = 30
+// serverNum = 3
+
+serverNumber = 5
+tupleNumber = 10
 
 contract('Auction manager test', (accounts) => {
     before(async() => {
@@ -20,50 +23,45 @@ contract('Auction manager test', (accounts) => {
         assert.notEqual(address, null)
         assert.notEqual(address, undefined)
 
-        r = await this.manager.Test()
-        console.log('block:::: ', r.receipt.blockNumber)
-        console.log(r.logs[0])
-        console.log(r.receipt.gasUsed)
     })
     it('registers server nodes', async () => {
         serverName = 'name'
-        for(j = 1; j < serverNum + 1; j ++ ) {
+        for(j = 1; j < serverNumber + 1; j ++ ) {
             i = Math.floor(Math.random() * 11) + 10
             _name = serverName + '_' + j
             console.log('registering server: ' + _name)
+            let stbalance = await web3.eth.getBalance(accounts[1], function(err, result) {
+                if (err) {
+                  console.log(err)
+                } else {
+                  console.log(web3.utils.fromWei(result, "ether") + " ETH")
+                }
+              })
             result = await this.manager.registerServerNode(
                 _name, //name
-                //  i, //  busy power
-                // i, i, // down bw, idle power
-                // i, //  level
                 i * 10000, //mips
-                //  i, //, ram
-                // i, // rate per mips
-                // i,//up link latency
-                //  i, // , area id
-                // i, // join delay
                  i * 10, // , x,
                 i * 10, i     // y, offer
             )
-            // evnt = result.logs[0].args
-            // assert.equal(i + 1, evnt.biddersCount.toNumber())
-            // console.log('auction: ', evnt.auctionID.toNumber())
-            // console.log('bidders: ', evnt.biddersCount.toNumber())
+            let endbalance = await web3.eth.getBalance(accounts[1])
+            console.log("deeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+            console.log(typeof endbalance)
+            console.log(await web3.eth.getTransactionReceipt(result.receipt.transactionHash))
+            // console.log(stbalance.minus(endbalance))
+            console.log(result)
+            console.log(result.receipt)
             console.log('gas: ', result.receipt.gasUsed)
-            console.log('block:::: ', r.receipt.blockNumber)
+            console.log('block:::: ', result.receipt.blockNumber)
         }
     })
     it('registers mobile task', async () => {
-        for (j = 1; j < tupleNum + 1; j ++) {
+        for (j = 1; j < tupleNumber + 1; j ++) {
             i = Math.floor(Math.random() * 11) + 10
-            console.log(j, i)
-            tupleIds.push(j)
-            console.log('registering tuple: ' + i)
+            console.log('registering tuple: ' + j)
             result = await this.manager.registerMobileTask(
                 j,
                 i * 5000, // cpu length
                 i * 1000, // nw length
-                // i, // pes number
                 i, // output number
                 i * 20, //deadline
                 i, //offer
@@ -73,78 +71,49 @@ contract('Auction manager test', (accounts) => {
                 i * 4, // ue trans powerr
                 i, // ue idle power (1-10000)
             )
-            // evnt = result.logs[0].args
-            // assert.equal(i + 1, evnt.biddersCount.toNumber())
-            // console.log('auction: ', evnt.auctionID.toNumber())
-            // console.log('bidders: ', evnt.biddersCount.toNumber())
             console.log('gas: ', result.receipt.gasUsed)
-            console.log('block:::: ', r.receipt.blockNumber)
-            // console.log(result.logs.length)
-            // console.log(result.logs[0])
+            console.log('block:::: ', result.receipt.blockNumber)
         }
     })
 
-    
-    // it('registers mobile task', async () => {
-    //     for (i = tupleNum + 1; i < tupleNum + tupleNum; i ++) {
-    //         tupleIds.push(i)
-    //         console.log('registering tuple: ' + i)
-    //         result = await this.manager.registerMobileTask(
-    //             i,
-    //             i, // cpu length
-    //             i * 1000, // nw length
-    //             i, // pes number
-    //             i, // output number
-    //             i, //deadline
-    //             i, //offer
-    //             i * 5000, // ue up bw
-    //             i, //x
-    //             i, //y
-    //             i * 4, // ue trans powerr
-    //         )
-    //         // evnt = result.logs[0].args
-    //         // assert.equal(i + 1, evnt.biddersCount.toNumber())
-    //         // console.log('auction: ', evnt.auctionID.toNumber())
-    //         // console.log('bidders: ', evnt.biddersCount.toNumber())
-    //         console.log('gas: ', result.receipt.gasUsed)
-    //     }
-    // })
-    // it('registers server nodes', async () => {
-    //     serverName = 'name'
-    //     for(i = serverNum + 1; i < serverNum + serverNum; i ++ ) {
-    //         _name = serverName + '_' + i
-    //         console.log('registering server: ' + _name)
-    //         result = await this.manager.registerServerNode(
-    //             _name, i, // name, busy power
-    //             i, i, // down bw, idle power
-    //             // i, //  level
-    //             i * 100, i, //, mips, ram
-    //             // i, // rate per mips
-    //             i,//up link latency
-    //             //  i, // , area id
-    //             // i, // join delay
-    //             i, // , x,
-    //             i, i     // y, offer
-    //         )
-    //         // evnt = result.logs[0].args
-    //         // assert.equal(i + 1, evnt.biddersCount.toNumber())
-    //         // console.log('auction: ', evnt.auctionID.toNumber())
-    //         // console.log('bidders: ', evnt.biddersCount.toNumber())
-    //         console.log('gas: ', result.receipt.gasUsed)
-    //     }
-    // })
-
-    it('auction result', async () => {
-        for (j = 0; j < tupleIds.length; j ++) {
-            console.log()
-            console.log('FOUDING RESULT FOR TUPLE ID: ', tupleIds[j])
-            result = await this.manager.auctionResultTuple(tupleIds[j])
-            // for (i = 0; i < result.logs.length; i ++) {
-            //     console.log(i)
-            //     console.log(result.logs[i].args)
-            // }
+    it('create tuple required mips', async () => {
+        for (j = 1; j < tupleNumber + 1; j ++) {
+            console.log('create req mips for tuple: ' + j)
+            result = await this.manager.createTupleRequireMips(
+                j,
+            )
             console.log('gas: ', result.receipt.gasUsed)
-            console.log('block:::: ', r.receipt.blockNumber)
+            console.log('block:::: ', result.receipt.blockNumber)
+        }
+    })
+    it('create tuple priorities', async () => {
+        for (j = 1; j < tupleNumber + 1; j ++) {
+            console.log('create priorities for tuple: ' + j)
+            result = await this.manager.createTuplePriorities(
+                j,
+            )
+            console.log('gas: ', result.receipt.gasUsed)
+            console.log('block:::: ', result.receipt.blockNumber)
+        }
+    })
+    it('create server priorities', async () => {
+        serverName = 'name'
+        for(j = 1; j < serverNumber + 1; j ++ ) {
+            _name = serverName + '_' + j
+            console.log('create server priority for: ' + _name)
+            result = await this.manager.createServerPriorities(
+                _name,
+            )
+            console.log('gas: ', result.receipt.gasUsed)
+            console.log('block:::: ', result.receipt.blockNumber)
+        }
+    })
+    it('auction result', async () => {
+        for (j = 1; j < tupleNumber + 1; j ++) {
+            console.log('FOUDING RESULT FOR TUPLE ID: ', j)
+            result = await this.manager.auctionResultTuple(j)
+            console.log('gas: ', result.receipt.gasUsed)
+            console.log('block:::: ', result.receipt.blockNumber)
         }
 
     })

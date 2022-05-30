@@ -5,71 +5,71 @@ pragma solidity >=0.4.22 <0.9.0;
 contract AuctionManager {
     struct ServerPriorityBlock {
         string name;
-        uint cost;
+        uint64 cost;
     }
 
     struct MobilePriorityBlock {
-        uint id;
-        uint cost;
+        uint64 id;
+        uint64 cost;
     }
 
     struct ServerNode {
         string name;
 
-        uint mips;
+        uint64 mips;
         
-        uint xCoordinate;
-        uint yCoordinate;
+        uint64 xCoordinate;
+        uint64 yCoordinate;
 
-        uint offer;
+        uint64 offer;
     }
 
     struct MobileTask {
-        uint id;
+        uint64 id;
 
-        uint cpuLength;
-        uint nwLength;
-        uint outputSize;
+        uint64 cpuLength;
+        uint64 nwLength;
+        uint64 outputSize;
 
-        uint deadline;
+        uint64 deadline;
 
-        uint offer;
+        uint64 offer;
 
-        uint ueUpBW;
+        uint64 ueUpBW;
 
-        uint xCoordinate;
-        uint yCoordinate;
+        uint64 xCoordinate;
+        uint64 yCoordinate;
 
-        uint ueTransmissionPower;
-        uint ueIdlePower;
+        uint64 ueTransmissionPower;
+        uint64 ueIdlePower;
     }
 
     struct TupleMappingMips {
-        mapping(uint => uint) tuples;
+        mapping(uint64 => uint64) tuples;
     }
-    mapping(string => uint) tempServerQuta;
-    mapping(uint => string) tempTupleResult;
+    mapping(string => uint64) tempServerQuta;
+    mapping(uint64 => string) tempTupleResult;
 
     string[] tempVisitedServers;
-    uint[] tempVisitedTuples;
+    uint64[] tempVisitedTuples;
 
     struct Auction {
 
-        uint[] assingedTuples;
-        uint[] mobileKeys;
+        uint64[] assingedTuples;
+        uint64[] mobileKeys;
         string[] serverKeys;
-        mapping(uint => MobileTask) mobileTasks;
-        mapping(uint => ServerPriorityBlock[]) mobilePriorities;
+        mapping(uint64 => MobileTask) mobileTasks;
+        mapping(uint64 => ServerPriorityBlock[]) mobilePriorities;
 
         mapping(string => ServerNode) serverNodes;
         mapping(string => MobilePriorityBlock[]) serverPriorities;
-        mapping(string => uint) serverQuta;
+        mapping(string => uint64) serverQuta;
         
         mapping(string => TupleMappingMips) tupleRequireMips;
         
-        mapping(uint => string) tupleResult;
-        mapping(uint => bool) assingedTuplesMap;
-        mapping(string => uint) serverResult;
+        mapping(uint64 => string) tupleResult;
+        mapping(uint64 => bool) assingedTuplesMap;
+        mapping(string => uint64) serverResult;
       
     }
     Auction activeAuction;
@@ -77,20 +77,20 @@ contract AuctionManager {
     //     string serverName
     // );
     // event MobileTaskRegistered(
-    //     uint id,
-    //     uint biddersCount
+    //     uint64 id,
+    //     uint64 biddersCount
     // );
 
     // event ServerNodeRegistered(
     //     string name,
-    //     uint biddersCount
+    //     uint64 biddersCount
     // );
 
     function registerMobileTask(
-        uint id, uint cpuLength, uint nwLength, 
-         uint outputSize,
-        uint deadline, uint offer, uint ueUpBW, uint xCoordinate, uint yCoordinate,
-        uint ueTransmissionPower, uint ueIdlePower
+        uint64 id, uint64 cpuLength, uint64 nwLength, 
+         uint64 outputSize,
+        uint64 deadline, uint64 offer, uint64 ueUpBW, uint64 xCoordinate, uint64 yCoordinate,
+        uint64 ueTransmissionPower, uint64 ueIdlePower
     ) public {
         activeAuction.mobileTasks[id] = MobileTask(
             id, cpuLength, nwLength, 
@@ -100,26 +100,26 @@ contract AuctionManager {
         );
         activeAuction.mobileKeys.push(id);
         // createTuplePriorities(activeAuction.mobileTasks[id]);
-        // updateServerPriorities(activeAuction.mobileTasks[id]);
-        // updateTupleRequireMips(activeAuction.mobileTasks[id]);
+        // updateServerPriorities(activeAuction.mobileTasks[id]); NO
+        // updateTupleRequireMips(activeAuction.mobileTasks[id]);  NO
         // emit MobileTaskRegistered(id, activeAuction.mobileKeys.length);
     }
 
-    function updateServerPriorities(uint id) public  {
-        MobileTask memory tuple = activeAuction.mobileTasks[id];
-        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
-            string memory serverName = activeAuction.serverKeys[i];
-            MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
-                tuple.id,
-                serverCost(activeAuction.serverNodes[serverName], tuple)
-            );
-            addMobilePriorityBlockSorted(newPriorityBlock, serverName);
-        }
-    }
+    // function updateServerPriorities(uint64 id) public  {
+    //     MobileTask memory tuple = activeAuction.mobileTasks[id];
+    //     for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
+    //         string memory serverName = activeAuction.serverKeys[i];
+    //         MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
+    //             tuple.id,
+    //             serverCost(activeAuction.serverNodes[serverName], tuple)
+    //         );
+    //         addMobilePriorityBlockSorted(newPriorityBlock, serverName);
+    //     }
+    // }
 
-    function createTuplePriorities(uint id) public {
+    function createTuplePriorities(uint64 id) public {
         MobileTask memory tuple = activeAuction.mobileTasks[id];
-        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
+        for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
             string memory serverName = activeAuction.serverKeys[i];
             ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
                 serverName,
@@ -131,9 +131,9 @@ contract AuctionManager {
 
     function registerServerNode(
         string memory name, 
-         uint mips,
-        uint xCoordinate,
-        uint yCoordinate , uint offer
+         uint64 mips,
+        uint64 xCoordinate,
+        uint64 yCoordinate , uint64 offer
     ) public {
 
         activeAuction.serverNodes[name] = ServerNode(
@@ -143,27 +143,27 @@ contract AuctionManager {
         activeAuction.serverKeys.push(name);
         // createServerPriorities(activeAuction.serverNodes[name]);
         activeAuction.serverQuta[name] = mips;
-        // updateTuplePriorities(activeAuction.serverNodes[name]);
+        // updateTuplePriorities(activeAuction.serverNodes[name]); NO
         // createTupleRequireMips(activeAuction.serverNodes[name]);
         // emit ServerNodeRegistered(name, activeAuction.serverKeys.length);
     }
 
     function createTupleRequireMips(string memory serverName) public {
         ServerNode memory server = activeAuction.serverNodes[serverName];
-        for (uint i = 0; i < activeAuction.mobileKeys.length; i ++) {
+        for (uint64 i = 0; i < activeAuction.mobileKeys.length; i ++) {
             MobileTask memory tuple = activeAuction.mobileTasks[activeAuction.mobileKeys[i]];
             activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
         }
     }
 
-    function updateTupleRequireMips(uint id) public {
-        MobileTask memory tuple = activeAuction.mobileTasks[id];
-        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
-            ServerNode memory server = activeAuction.serverNodes[activeAuction.serverKeys[i]];
-            activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
-        }
-    }
-    function log2(uint x) private pure returns (uint y){
+    // function updateTupleRequireMips(uint64 id) public {
+    //     MobileTask memory tuple = activeAuction.mobileTasks[id];
+    //     for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
+    //         ServerNode memory server = activeAuction.serverNodes[activeAuction.serverKeys[i]];
+    //         activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
+    //     }
+    // }
+    function log2(uint64 x) private pure returns (uint64 y){
         assembly {
             let arg := x
             x := sub(x,1)
@@ -193,19 +193,19 @@ contract AuctionManager {
             y := add(y, mul(256, gt(arg, 0x8000000000000000000000000000000000000000000000000000000000000000)))
         }  
     }
-    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private pure returns (uint) {
-        int distplus6 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
-                        + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
-        uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
-        uint t_ij_transmit = tuple.nwLength / (logvint * tuple.ueUpBW);
-        uint mps = tuple.cpuLength / (tuple.deadline - t_ij_transmit);
+    function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private pure returns (uint64) {
+        int64 distplus6 = ((int64(tuple.xCoordinate) - int64(server.xCoordinate)) ** 2 
+                        + (int64(tuple.yCoordinate) - int64(server.yCoordinate)) ** 2) ** 2;
+        uint64 logvint = log2(uint64(1 + (500000000000 * int64(tuple.ueTransmissionPower)) / distplus6));
+        uint64 t_ij_transmit = tuple.nwLength / (logvint * tuple.ueUpBW);
+        uint64 mps = tuple.cpuLength / (tuple.deadline - t_ij_transmit);
         return mps;
     }
 
     function createServerPriorities(string memory serverName) public {
         ServerNode memory server = activeAuction.serverNodes[serverName];
-        for (uint i = 0; i < activeAuction.mobileKeys.length; i++) {
-            uint tupleID = activeAuction.mobileKeys[i];
+        for (uint64 i = 0; i < activeAuction.mobileKeys.length; i++) {
+            uint64 tupleID = activeAuction.mobileKeys[i];
             MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
                 tupleID,
                 serverCost(server, activeAuction.mobileTasks[tupleID])
@@ -215,82 +215,87 @@ contract AuctionManager {
     }
 
     function addMobilePriorityBlockSorted(MobilePriorityBlock memory priorityBlock, string memory serverName) private {
+        // this must add priorityBlock to Auction.serverPriorities in a sorted way later
+        // 900 800 700 200
+        // 200
         activeAuction.serverPriorities[serverName].push(priorityBlock); // TODO
-        MobilePriorityBlock[] memory serverPriorities = activeAuction.serverPriorities[serverName];
-        if (serverPriorities.length == 1) {
+        if (activeAuction.serverPriorities[serverName].length == 1) {
             return;
         }
-        uint i = 0;
-        for (i; i < serverPriorities.length - 1; i ++ ) {
-            if (!(priorityBlock.cost < serverPriorities[i].cost)) {
+        uint64 i = 0;
+        for (i; i < activeAuction.serverPriorities[serverName].length - 1; i ++ ) {
+            if (!(priorityBlock.cost < activeAuction.serverPriorities[serverName][i].cost)) {
                 break;
             }
         }
-        for (uint j = serverPriorities.length - 1; j > i; j --) {
-            activeAuction.serverPriorities[serverName][j] = serverPriorities[j - 1];
+        for (uint256 j = activeAuction.serverPriorities[serverName].length - 1; j > i; j --) {
+            activeAuction.serverPriorities[serverName][j] = activeAuction.serverPriorities[serverName][j - 1];
         }
         activeAuction.serverPriorities[serverName][i] = priorityBlock;
     }
 
-    function updateTuplePriorities(string memory serverName) public {
-        ServerNode memory server = activeAuction.serverNodes[serverName];
-        for (uint i = 0; i < activeAuction.mobileKeys.length; i ++) {
-            uint tupleId = activeAuction.mobileKeys[i];
-            ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
-                server.name,
-                tupleCost(activeAuction.mobileTasks[tupleId], server)
-            );
-            addServerPriorityBlockSorted(newPriorityBlock, tupleId);
-        }
-    }
-    function addServerPriorityBlockSorted(ServerPriorityBlock memory priorityBlock, uint tupleID) private {
-        ServerPriorityBlock[] memory moiblePriorities = activeAuction.mobilePriorities[tupleID];
+    // function updateTuplePriorities(string memory serverName) public {
+    //     ServerNode memory server = activeAuction.serverNodes[serverName];
+    //     for (uint64 i = 0; i < activeAuction.mobileKeys.length; i ++) {
+    //         uint64 tupleId = activeAuction.mobileKeys[i];
+    //         ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
+    //             server.name,
+    //             tupleCost(activeAuction.mobileTasks[tupleId], server)
+    //         );
+    //         addServerPriorityBlockSorted(newPriorityBlock, tupleId);
+    //     }
+    // }
+       function addServerPriorityBlockSorted(ServerPriorityBlock memory priorityBlock, uint64 tupleID) private {
+        // this must add priorityBlock to Auction.serverPriorities in a sorted way later
         activeAuction.mobilePriorities[tupleID].push(priorityBlock); // TODO
-        if (moiblePriorities.length == 1) {
+        if (activeAuction.mobilePriorities[tupleID].length == 1) {
             return;
         }
-        uint i = 0;
-        for (i; i < moiblePriorities.length - 1; i ++ ) {
-            if (priorityBlock.cost < moiblePriorities[i].cost) {
+        // 100 200 400
+        uint64 i = 0;
+        for (i; i < activeAuction.mobilePriorities[tupleID].length - 1; i ++ ) {
+            if (priorityBlock.cost < activeAuction.mobilePriorities[tupleID][i].cost) {
                 break;
             }
         }
-        for (uint j = moiblePriorities.length - 1; j > i; j --) {
-            activeAuction.mobilePriorities[tupleID][j] = moiblePriorities[j - 1];
+        // 100 200 400 ?
+        for (uint256 j = activeAuction.mobilePriorities[tupleID].length - 1; j > i; j --) {
+            activeAuction.mobilePriorities[tupleID][j] = activeAuction.mobilePriorities[tupleID][j - 1];
         }
         activeAuction.mobilePriorities[tupleID][i] = priorityBlock;
     }
-    function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint) {
-        int distplus6 = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
-                                + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2) ** 2;
-        uint logvint = log2(uint(1 + (500000000000 * int256(tuple.ueTransmissionPower)) / distplus6));
-        uint t_ij_transmit = (1000000 * tuple.nwLength) / (logvint * tuple.ueUpBW);
-        uint t_ij_process = (1000000 * tuple.cpuLength) / server.mips;
-        uint t_ij_offload_norm = (t_ij_transmit + t_ij_process) / tuple.deadline;
-        uint e_ij_offload_norm = (t_ij_transmit * tuple.ueTransmissionPower * 1000 
+    function tupleCost(MobileTask memory tuple, ServerNode memory server) private pure returns (uint64) {
+        int64 distplus6 = ((int64(tuple.xCoordinate) - int64(server.xCoordinate)) ** 2 
+                                + (int64(tuple.yCoordinate) - int64(server.yCoordinate)) ** 2) ** 2;
+        uint64 logvint = log2(uint64(1 + (500000000000 * int64(tuple.ueTransmissionPower)) / distplus6));
+        uint64 t_ij_transmit = (1000000 * tuple.nwLength) / (logvint * tuple.ueUpBW);
+       
+        uint64 t_ij_process = (1000000 * tuple.cpuLength) / server.mips;
+        uint64 t_ij_offload_norm = (t_ij_transmit + t_ij_process) / tuple.deadline;
+        uint64 e_ij_offload_norm = (t_ij_transmit * tuple.ueTransmissionPower * 1000 
                             + t_ij_process * tuple.ueIdlePower) / 
                                         (tuple.deadline * (tuple.ueTransmissionPower * 1000 + tuple.ueIdlePower));
-        uint pref = t_ij_offload_norm + e_ij_offload_norm + server.offer * 1000; // (server.offer/1000) * 1000000
+        uint64 pref = t_ij_offload_norm + e_ij_offload_norm + server.offer * 1000; // (server.offer/1000) * 1000000
         // sort 100 200 300 ...
         return pref;
     }
-    function sqrt(uint x) private pure returns (uint y) {
-        uint z = (x + 1) / 2;
+    function sqrt(uint64 x) private pure returns (uint64 y) {
+        uint64 z = (x + 1) / 2;
         y = x;
         while (z < y) {
             y = z;
             z = (x / z + z) / 2;
         }
     }
-    function serverCost(ServerNode memory server, MobileTask memory tuple) private pure returns (uint) {
+    function serverCost(ServerNode memory server, MobileTask memory tuple) private pure returns (uint64) {
 
-        int dist = ((int256(tuple.xCoordinate) - int256(server.xCoordinate)) ** 2 
-                        + (int256(tuple.yCoordinate) - int256(server.yCoordinate)) ** 2);
-        uint cost =  uint128(1000000 + tuple.offer * 1000 - 2357 * sqrt(uint(dist)));
+        int64 dist = ((int64(tuple.xCoordinate) - int64(server.xCoordinate)) ** 2 
+                        + (int64(tuple.yCoordinate) - int64(server.yCoordinate)) ** 2);
+        uint64 cost =  uint64(1000000 + tuple.offer * 1000 - 2357 * sqrt(uint64(dist)));
         return cost;
     }
 
-    function auctionResultTuple(uint tupleID) public {
+    function auctionResultTuple(uint64 tupleID) public {
 
         if (activeAuction.assingedTuplesMap[tupleID] == false) {
             calcAuctionResult(tupleID);
@@ -299,9 +304,9 @@ contract AuctionManager {
         // emit AuctionTupleResult(activeAuction.tupleResult[tupleID]);
     }
 
-    function calcAuctionResult(uint tupleID) private {
-        uint initalTupleID = tupleID;
-        for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
+    function calcAuctionResult(uint64 tupleID) private {
+        uint64 initalTupleID = tupleID;
+        for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
             tempServerQuta[activeAuction.serverKeys[i]] = activeAuction.serverQuta[activeAuction.serverKeys[i]];
         }
         while (true) {
@@ -309,17 +314,17 @@ contract AuctionManager {
                 bool tupleNotAssigned = true;
                 bool foundCircle = false;
                 string memory circleStartServer = "";
-                for (uint i = 0; i < activeAuction.serverKeys.length; i ++) {
+                for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
                     string memory serverName = activeAuction.mobilePriorities[tupleID][i].name;
-                    uint tupleMips = activeAuction.tupleRequireMips[serverName].tuples[tupleID];
+                    uint64 tupleMips = activeAuction.tupleRequireMips[serverName].tuples[tupleID];
                     if (tupleMips <= tempServerQuta[serverName] && 
                         activeAuction.serverNodes[serverName].offer <= activeAuction.mobileTasks[tupleID].offer) { // servers does not exit the process at all!!! NOTE
                         tempServerQuta[serverName] = tempServerQuta[serverName] - tupleMips;
                         tempTupleResult[tupleID] = serverName;
                         tupleNotAssigned = false;
-                        for (uint j = 0; j < activeAuction.mobileKeys.length; j ++) { // No calc on if server is able to handle
+                        for (uint64 j = 0; j < activeAuction.mobileKeys.length; j ++) { // No calc on if server is able to handle
  
-                            uint perfTupleID = activeAuction.serverPriorities[serverName][j].id;
+                            uint64 perfTupleID = activeAuction.serverPriorities[serverName][j].id;
                             if (activeAuction.assingedTuplesMap[perfTupleID] == false) {
                                 activeAuction.serverResult[serverName] = perfTupleID;
                                 break;
@@ -332,8 +337,8 @@ contract AuctionManager {
                         while (true) {
 
                             if (activeAuction.serverResult[serverRounding] != 0) {
-                                uint TupleRounding = activeAuction.serverResult[serverRounding];
-                                for (uint ind1 = 0; ind1 < tempVisitedTuples.length; ind1 ++) {
+                                uint64 TupleRounding = activeAuction.serverResult[serverRounding];
+                                for (uint64 ind1 = 0; ind1 < tempVisitedTuples.length; ind1 ++) {
                                     if (TupleRounding == tempVisitedTuples[ind1]) {
                                         foundCircle = true;
                                         circleStartServer = serverRounding;
@@ -344,7 +349,7 @@ contract AuctionManager {
 
                                 if (bytes(tempTupleResult[activeAuction.serverResult[serverRounding]]).length > 0) {
                                     serverRounding = tempTupleResult[activeAuction.serverResult[serverRounding]];
-                                    for (uint ind1 = 0; ind1 < tempVisitedServers.length; ind1 ++) {
+                                    for (uint64 ind1 = 0; ind1 < tempVisitedServers.length; ind1 ++) {
                                         if (keccak256(abi.encodePacked((serverRounding))) == keccak256(abi.encodePacked((tempVisitedServers[ind1])))) {
                                             foundCircle = true;
                                             circleStartServer = serverRounding;
@@ -361,12 +366,12 @@ contract AuctionManager {
                 }
                 if (foundCircle) {
 
-                    uint tupleRoundingID = activeAuction.serverResult[circleStartServer];
+                    uint64 tupleRoundingID = activeAuction.serverResult[circleStartServer];
                     while (true) {
                         activeAuction.tupleResult[tupleRoundingID] = tempTupleResult[tupleRoundingID];
                         activeAuction.assingedTuples.push(tupleRoundingID);
                         activeAuction.assingedTuplesMap[tupleRoundingID] = true;
-                        uint tupleMips = activeAuction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
+                        uint64 tupleMips = activeAuction.tupleRequireMips[tempTupleResult[tupleRoundingID]].tuples[tupleID];
                         activeAuction.serverQuta[tempTupleResult[tupleRoundingID]] = activeAuction.serverQuta[tempTupleResult[tupleRoundingID]] - tupleMips;
                         if (keccak256(abi.encodePacked((tempTupleResult[tupleRoundingID]))) == keccak256(abi.encodePacked((circleStartServer)))) {
                             break;

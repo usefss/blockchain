@@ -47,6 +47,7 @@ contract AuctionManager {
     struct TupleMappingMips {
         mapping(uint64 => uint64) tuples;
     }
+
     mapping(string => uint64) tempServerQuta;
     mapping(uint64 => string) tempTupleResult;
 
@@ -70,12 +71,35 @@ contract AuctionManager {
         mapping(uint64 => string) tupleResult;
         mapping(uint64 => bool) assingedTuplesMap;
         mapping(string => uint64) serverResult;
-      
+
+        uint startRegistrationTime;
+        uint startListCreationTime;
+        uint endListCreationTime;
+        uint auctionCloseTime;
     }
+
+    // all of time variables are in seconds
+
+    uint registrationTimespan;
+    uint listCreationTimespan;
+    uint getResultTimespan;
+
+    bool isAuctionActive;
     Auction activeAuction;
-    // event AuctionTupleResult (
-    //     string serverName
-    // );
+
+    event AuctionTupleResult (
+        string serverName
+    );
+
+    event AuctionServerResultMatchTuple(
+        uint tupleId,
+        string serverName
+    );
+
+    event AuctionStarted (
+        string message
+    );
+
     // event MobileTaskRegistered(
     //     uint64 id,
     //     uint64 biddersCount
@@ -85,6 +109,42 @@ contract AuctionManager {
     //     string name,
     //     uint64 biddersCount
     // );
+
+    constructor() {
+        isAuctionActive = false;
+        registrationTimespan = 100;
+        listCreationTimespan = 100;
+        getResultTimespan = 100;
+    }
+
+    function initAuction() private {
+
+        isAuctionActive = true;
+        activeAuction.startRegistrationTime = block.timestamp;
+        activeAuction.startListCreationTime = activeAuction.startRegistrationTime + registrationTimespan;
+        activeAuction.endListCreationTime = activeAuction.startListCreationTime + listCreationTimespan;
+        activeAuction.auctionCloseTime = activeAuction.endListCreationTime + getResultTimespan;
+
+        // remove old auction state variables
+        if (activeAuction.assingedTuples.length > 0)
+            delete activeAuction.assingedTuples;
+        if (activeAuction.mobileKeys.length > 0)
+            delete activeAuction.mobileKeys;
+        if ( activeAuction.serverKeys.length > 0)
+            delete activeAuction.serverKeys;
+        if ( tempVisitedServers.length > 0)
+            delete tempVisitedServers;
+        if ( tempVisitedTuples.length > 0)
+            delete tempVisitedTuples;
+            
+        emit AuctionStarted("New auction has been started");
+    }
+
+    function checkAuctionIsActiveOrStart() private {
+        if (!isAuctionActive || block.timestamp > activeAuction.auctionCloseTime) {
+            initAuction();
+        }
+    }
 
     function registerMobileTask(
         uint64 id, uint64 cpuLength, uint64 nwLength, 
@@ -98,26 +158,22 @@ contract AuctionManager {
             offer, ueUpBW, xCoordinate, yCoordinate, ueTransmissionPower,
             ueIdlePower
         );
+
+
+        checkAuctionIsActiveOrStart();
+        
+        require(block.timestamp <= activeAuction.startListCreationTime, "Not in the registration timespan of active auction");
+        
         activeAuction.mobileKeys.push(id);
-        // createTuplePriorities(activeAuction.mobileTasks[id]);
-        // updateServerPriorities(activeAuction.mobileTasks[id]); NO
-        // updateTupleRequireMips(activeAuction.mobileTasks[id]);  NO
         // emit MobileTaskRegistered(id, activeAuction.mobileKeys.length);
     }
 
-    // function updateServerPriorities(uint64 id) public  {
-    //     MobileTask memory tuple = activeAuction.mobileTasks[id];
-    //     for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
-    //         string memory serverName = activeAuction.serverKeys[i];
-    //         MobilePriorityBlock memory newPriorityBlock = MobilePriorityBlock(
-    //             tuple.id,
-    //             serverCost(activeAuction.serverNodes[serverName], tuple)
-    //         );
-    //         addMobilePriorityBlockSorted(newPriorityBlock, serverName);
-    //     }
-    // }
+    function createTuplePreferences(uint64 id) public {
 
-    function createTuplePriorities(uint64 id) public {
+        require(isAuctionActive && block.timestamp <= activeAuction.endListCreationTime && block.timestamp >= activeAuction.startListCreationTime,
+            "Not in the list creation timespan of the active auction");
+
+
         MobileTask memory tuple = activeAuction.mobileTasks[id];
         for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
             string memory serverName = activeAuction.serverKeys[i];
@@ -140,15 +196,14 @@ contract AuctionManager {
             name, mips,
             xCoordinate, yCoordinate, offer
         );
+        checkAuctionIsActiveOrStart();
+        require(block.timestamp <= activeAuction.startListCreationTime, "Not in the registration timespan of active auction");
         activeAuction.serverKeys.push(name);
-        // createServerPriorities(activeAuction.serverNodes[name]);
         activeAuction.serverQuta[name] = mips;
-        // updateTuplePriorities(activeAuction.serverNodes[name]); NO
-        // createTupleRequireMips(activeAuction.serverNodes[name]);
         // emit ServerNodeRegistered(name, activeAuction.serverKeys.length);
     }
 
-    function createTupleRequireMips(string memory serverName) public {
+    function createTupleRequireMips(string memory serverName) private {
         ServerNode memory server = activeAuction.serverNodes[serverName];
         for (uint64 i = 0; i < activeAuction.mobileKeys.length; i ++) {
             MobileTask memory tuple = activeAuction.mobileTasks[activeAuction.mobileKeys[i]];
@@ -156,13 +211,6 @@ contract AuctionManager {
         }
     }
 
-    // function updateTupleRequireMips(uint64 id) public {
-    //     MobileTask memory tuple = activeAuction.mobileTasks[id];
-    //     for (uint64 i = 0; i < activeAuction.serverKeys.length; i ++) {
-    //         ServerNode memory server = activeAuction.serverNodes[activeAuction.serverKeys[i]];
-    //         activeAuction.tupleRequireMips[server.name].tuples[tuple.id] = getTupleMipsOnServer(server, tuple);
-    //     }
-    // }
     function log2(uint64 x) private pure returns (uint64 y){
         assembly {
             let arg := x
@@ -193,6 +241,7 @@ contract AuctionManager {
             y := add(y, mul(256, gt(arg, 0x8000000000000000000000000000000000000000000000000000000000000000)))
         }  
     }
+
     function getTupleMipsOnServer(ServerNode memory server, MobileTask memory tuple) private pure returns (uint64) {
         int64 distplus6 = ((int64(tuple.xCoordinate) - int64(server.xCoordinate)) ** 2 
                         + (int64(tuple.yCoordinate) - int64(server.yCoordinate)) ** 2) ** 2;
@@ -203,6 +252,8 @@ contract AuctionManager {
     }
 
     function createServerPriorities(string memory serverName) public {
+        require(isAuctionActive && block.timestamp <= activeAuction.endListCreationTime && block.timestamp >= activeAuction.startListCreationTime,
+            "Not in the list creation timespan of the active auction");
         ServerNode memory server = activeAuction.serverNodes[serverName];
         for (uint64 i = 0; i < activeAuction.mobileKeys.length; i++) {
             uint64 tupleID = activeAuction.mobileKeys[i];
@@ -212,6 +263,7 @@ contract AuctionManager {
             );
             addMobilePriorityBlockSorted(newPriorityBlock, server.name);
         }
+        createTupleRequireMips(serverName);
     }
 
     function addMobilePriorityBlockSorted(MobilePriorityBlock memory priorityBlock, string memory serverName) private {
@@ -234,18 +286,8 @@ contract AuctionManager {
         activeAuction.serverPriorities[serverName][i] = priorityBlock;
     }
 
-    // function updateTuplePriorities(string memory serverName) public {
-    //     ServerNode memory server = activeAuction.serverNodes[serverName];
-    //     for (uint64 i = 0; i < activeAuction.mobileKeys.length; i ++) {
-    //         uint64 tupleId = activeAuction.mobileKeys[i];
-    //         ServerPriorityBlock memory newPriorityBlock = ServerPriorityBlock(
-    //             server.name,
-    //             tupleCost(activeAuction.mobileTasks[tupleId], server)
-    //         );
-    //         addServerPriorityBlockSorted(newPriorityBlock, tupleId);
-    //     }
-    // }
-       function addServerPriorityBlockSorted(ServerPriorityBlock memory priorityBlock, uint64 tupleID) private {
+
+    function addServerPriorityBlockSorted(ServerPriorityBlock memory priorityBlock, uint64 tupleID) private {
         // this must add priorityBlock to Auction.serverPriorities in a sorted way later
         activeAuction.mobilePriorities[tupleID].push(priorityBlock); // TODO
         if (activeAuction.mobilePriorities[tupleID].length == 1) {
@@ -295,12 +337,24 @@ contract AuctionManager {
         return cost;
     }
 
-    function auctionResultTuple(uint64 tupleID) public {
 
+    // function auctionResultServer(string memory serverName) public view{
+    //     require(isAuctionActive && block.timestamp >= activeAuction.endListCreationTime && block.timestamp <= activeAuction.auctionCloseTime,
+    //         "Not in the get result timespan of active auction");
+
+    //     for (uint i = 0; i < ?; i ++) {
+
+    //     }
+
+    // }
+
+    function auctionResultTuple(uint64 tupleID) public {
+        require(isAuctionActive && block.timestamp >= activeAuction.endListCreationTime && block.timestamp <= activeAuction.auctionCloseTime,
+            "Not in the get result timespan of active auction");
         if (activeAuction.assingedTuplesMap[tupleID] == false) {
             calcAuctionResult(tupleID);
-        } else {
         }
+        emit AuctionServerResultMatchTuple(tupleID, activeAuction.tupleResult[tupleID]);
         // emit AuctionTupleResult(activeAuction.tupleResult[tupleID]);
     }
 
